@@ -96,6 +96,55 @@ func TestApprovalPolicyRevisionInvalidation(t *testing.T) {
 		t.Fatal("stale approval dispatched")
 	}
 }
+
+// Approving one dynamic MCP tool "for this workspace" must not allow every
+// other tool of that server or any other connected MCP server.
+func TestDynamicMCPWorkspaceRuleIsScopedToOneTool(t *testing.T) {
+	s, _ := New(t.TempDir())
+	ctx := context.Background()
+	grant := func(tool, action string) (Approval, error) {
+		id, _ := activity.NewExecutionID("call_")
+		a, err := s.Create(ctx, Approval{Binding: activity.Binding{CallID: id, WorkspaceID: "wsp_one"}, Tool: tool, Action: action, PolicyRevision: currentRevision(t, s)})
+		if err != nil {
+			return Approval{}, err
+		}
+		saved, _, err := s.ClaimWithWorkspaceRule(ctx, a.ID, true)
+		return saved, err
+	}
+	if saved, err := grant("mcp_tool_call", "cua-driver:click"); err != nil || saved.GrantedRuleID == "" {
+		t.Fatalf("scoped dynamic MCP grant failed %+v %v", saved, err)
+	}
+	decide := func(action string) string {
+		d, err := s.Decide(ctx, Facts{Binding: activity.Binding{WorkspaceID: "wsp_one"}, Tool: "mcp_tool_call", Action: action})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d.Effect
+	}
+	if decide("cua-driver:click") != Allow {
+		t.Fatal("granted dynamic MCP tool still asks")
+	}
+	for _, other := range []string{"cua-driver:type_text", "other:click", ""} {
+		if decide(other) != Ask {
+			t.Fatalf("dynamic MCP grant leaked to %q", other)
+		}
+	}
+	for _, invalid := range []struct{ tool, action string }{{"exec_command", "a:b"}, {"mcp_tool_call", "no-separator"}, {"mcp_tool_call", ":click"}, {"mcp_tool_call", "cua driver:click"}} {
+		if _, err := grant(invalid.tool, invalid.action); err == nil {
+			t.Fatalf("invalid rule action accepted: %+v", invalid)
+		}
+	}
+}
+
+func currentRevision(t *testing.T, s *Store) uint64 {
+	t.Helper()
+	p, err := s.Get(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p.Revision
+}
+
 func TestApprovalWorkspaceRuleIsScoped(t *testing.T) {
 	s, _ := New(t.TempDir())
 	ctx := context.Background()

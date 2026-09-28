@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/uvwt/agentdock/internal/activity"
@@ -241,7 +242,7 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 			operation = command
 		}
 		redactor := r.executionRedactor(args)
-		a := permission.Approval{Reviewer: decision.Settings.Reviewer, Settings: &decision.Settings, Binding: state.binding, Tool: spec.Name, Action: stringArg(args, "action"), Operation: redactor.Text(operation, 16384), ScopeDescription: redactor.Text(r.executionScope(prepared), 4096), RuleID: decision.RuleID, Reason: decision.Reason, Mode: decision.Mode, PolicyRevision: decision.Revision}
+		a := permission.Approval{Reviewer: decision.Settings.Reviewer, Settings: &decision.Settings, Binding: state.binding, Tool: spec.Name, Action: permissionAction(spec.Name, args), Operation: redactor.Text(operation, 16384), ScopeDescription: redactor.Text(r.executionScope(prepared), 4096), RuleID: decision.RuleID, Reason: decision.Reason, Mode: decision.Mode, PolicyRevision: decision.Revision}
 		if state.selected != nil {
 			a.WorkspaceRevision = state.selected.RulesRevision
 		}
@@ -404,8 +405,23 @@ func (r *Runtime) executionScope(p *preparedExecution) string {
 	}
 	return scope
 }
+
+// permissionAction scopes rules and approvals. A dynamic MCP call is named by
+// its upstream <server>:<tool>, so "allow in this workspace" grants only that
+// tool instead of every connected MCP server. Other tools use their action.
+func permissionAction(name string, args map[string]any) string {
+	if name == "mcp_tool_call" {
+		server, tool, ok := strings.Cut(strings.TrimSpace(stringArg(args, "name")), ":")
+		if !ok {
+			return ""
+		}
+		return strings.TrimSpace(server) + ":" + strings.TrimSpace(tool)
+	}
+	return stringArg(args, "action")
+}
+
 func (r *Runtime) executionFacts(name string, args map[string]any, state executionObservation) permission.Facts {
-	f := permission.Facts{Binding: state.binding, Tool: name, Action: stringArg(args, "action")}
+	f := permission.Facts{Binding: state.binding, Tool: name, Action: permissionAction(name, args)}
 	switch name {
 	case "insertion_ack":
 		// A receipt cannot change tasks, commands, permissions or user text.

@@ -31,6 +31,20 @@ const (
 var ErrRevision = errors.New("permission policy changed; reload the effective policy")
 var validID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,80}$`)
 
+// A dynamic MCP rule names one upstream <server>:<tool>, so a grant for one
+// connected service never extends to every other MCP server.
+var validDynamicToolAction = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}:[A-Za-z0-9._/-]{1,128}$`)
+
+func validRuleAction(tool, action string) bool {
+	if action == "" {
+		return true
+	}
+	if tool == "mcp_tool_call" {
+		return validDynamicToolAction.MatchString(action)
+	}
+	return validID.MatchString(action)
+}
+
 type Rule struct {
 	ID          string `json:"id"`
 	Tool        string `json:"tool"`
@@ -228,7 +242,7 @@ func validatePolicy(p Policy) error {
 	}
 	seen = map[string]bool{}
 	for _, rule := range p.Rules {
-		if !validID.MatchString(rule.ID) || seen[rule.ID] || !validID.MatchString(rule.Tool) || (rule.Action != "" && !validID.MatchString(rule.Action)) || (rule.WorkspaceID != "" && !validID.MatchString(rule.WorkspaceID)) || (rule.Effect != Allow && rule.Effect != Ask && rule.Effect != Deny) || len(rule.Reason) > 512 {
+		if !validID.MatchString(rule.ID) || seen[rule.ID] || !validID.MatchString(rule.Tool) || !validRuleAction(rule.Tool, rule.Action) || (rule.WorkspaceID != "" && !validID.MatchString(rule.WorkspaceID)) || (rule.Effect != Allow && rule.Effect != Ask && rule.Effect != Deny) || len(rule.Reason) > 512 {
 			return errors.New("invalid permission rule")
 		}
 		seen[rule.ID] = true

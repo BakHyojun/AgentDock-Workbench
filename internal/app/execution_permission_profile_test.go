@@ -276,3 +276,18 @@ func TestExecutionCustomPermissionsDisabledUsesModeAndRetainsHistory(t *testing.
 		t.Fatal("profile-denied file exists")
 	}
 }
+
+// Rules and approvals for a dynamic MCP call name its exact upstream tool.
+func TestDynamicMCPPermissionActionNamesOneTool(t *testing.T) {
+	r := executionTestRuntime(t)
+	facts := r.executionFacts("mcp_tool_call", map[string]any{"name": " cua-driver : click ", "arguments": map[string]any{}}, executionObservation{})
+	if facts.Action != "cua-driver:click" {
+		t.Fatalf("dynamic MCP permission action = %q", facts.Action)
+	}
+	if got := permissionAction("mcp_tool_call", map[string]any{"name": "missing-separator"}); got != "" {
+		t.Fatalf("unqualified dynamic MCP name produced action %q", got)
+	}
+	if got := permissionAction("task_manage", map[string]any{"action": "create", "name": "x:y"}); got != "create" {
+		t.Fatalf("ordinary tool action changed to %q", got)
+	}
+}
