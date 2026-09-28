@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,6 +167,44 @@ func TestSetupRequestValidation(t *testing.T) {
 	}
 	if _, err := readSetupLaunchRequest(path); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSetupReceiptTransientReadFailures(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "result.json")
+	if err := writeSetupJSON(path, setupLaunchResult{TaskName: "fixture", ExitCode: 0}); err != nil {
+		t.Fatal(err)
+	}
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle, err := windows.CreateFile(name, windows.GENERIC_READ, 0, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, readErr := os.ReadFile(path)
+	closeErr := windows.CloseHandle(handle)
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if !errors.Is(readErr, windows.ERROR_SHARING_VIOLATION) || !setupReceiptPending(readErr) {
+		t.Fatalf("a temporary exclusive handle must not abort the launch: %v", readErr)
+	}
+	data, err := os.ReadFile(path)
+	var receipt setupLaunchResult
+	if err != nil || json.Unmarshal(data, &receipt) != nil || receipt.TaskName != "fixture" {
+		t.Fatalf("receipt not readable after handle release: %s, %v", data, err)
+	}
+	for _, err := range []error{os.ErrNotExist, windows.ERROR_LOCK_VIOLATION} {
+		if !setupReceiptPending(&os.PathError{Op: "open", Path: path, Err: err}) {
+			t.Fatalf("transient receipt error rejected: %v", err)
+		}
+	}
+	for _, err := range []error{nil, os.ErrPermission, windows.ERROR_ACCESS_DENIED, windows.ERROR_INVALID_NAME, io.ErrUnexpectedEOF} {
+		if setupReceiptPending(err) {
+			t.Fatalf("non-transient failure concealed: %v", err)
+		}
 	}
 }
 
