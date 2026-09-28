@@ -142,7 +142,9 @@ func TestWindowsPackageReusableAndSingleAutomaticReleaseOwner(t *testing.T) {
 		"actions/download-artifact@v8",
 		"gh release create",
 		"gh release upload",
-		"--clobber",
+		"-IncludeMetadata -RequireAcceptance",
+		"Verify-DownloadedRelease 'draft'",
+		"Verify-DownloadedRelease 'published'",
 		"docs/releases/$tag.md",
 		"ExpectedChannel release",
 	} {
@@ -153,6 +155,9 @@ func TestWindowsPackageReusableAndSingleAutomaticReleaseOwner(t *testing.T) {
 
 	if strings.Contains(workflow, "push:\n    tags:") {
 		t.Fatal("Windows-only workflow must not race all-platform publication")
+	}
+	if strings.Contains(workflow, "--clobber") {
+		t.Fatal("Windows publication must not delete or overwrite an existing released asset")
 	}
 	unified := readWorkflow(t, "workbench-release.yml")
 	for _, required := range []string{"push:\n    tags:", "windows-package.yml", "needs: [resolve-source, windows, windows-arm-package, unix, macos-app, android]", "parallel-android.yml", "source_sha: ${{ needs.resolve-source.outputs.commit }}", "publish-workbench.py", "prerelease:", "--prerelease"} {

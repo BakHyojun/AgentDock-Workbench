@@ -57,7 +57,7 @@ on:
         default: ''
         type: string
       installation_tests:
-        description: 'Explicit opt-in to isolated installer/runtime tests; normal releases never run an installer'
+        description: 'Run actual isolated installer/upgrade/recovery tests; mandatory for publication'
         required: true
         default: false
         type: boolean
@@ -76,7 +76,7 @@ concurrency:
 
 jobs:
   resolve-source:
-    if: github.repository_id == '1370391430'
+    if: github.repository == 'eerraa/AgentDock-Workbench'
     name: Resolve requested ref once
     runs-on: ubuntu-latest
     outputs:
@@ -95,7 +95,7 @@ jobs:
 
   linux-contracts:
     needs: resolve-source
-    if: github.repository_id == '1370391430'
+    if: github.repository == 'eerraa/AgentDock-Workbench'
     name: Linux transaction and concurrency regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -135,10 +135,11 @@ jobs:
     uses: ./.github/workflows/workbench-acceptance.yml
     with:
       ref: ${{ needs.resolve-source.outputs.commit }}
+      architectures: ${{ inputs.architectures || 'amd64' }}
 
   build:
     needs: [resolve-source, linux-contracts, native-acceptance]
-    if: github.repository_id == '1370391430'
+    if: github.repository == 'eerraa/AgentDock-Workbench'
     name: Build verified unsigned Windows packages
     runs-on: windows-latest
     timeout-minutes: 45
@@ -184,6 +185,7 @@ jobs:
           MANUAL_PUBLISH: ${{ inputs.publish }}
           MANUAL_PRERELEASE: ${{ inputs.prerelease }}
           MANUAL_TAG: ${{ inputs.tag }}
+          INSTALLATION_TESTS: ${{ inputs.installation_tests }}
           EXPECTED_COMMIT: ${{ needs.resolve-source.outputs.commit }}
           TESTED_COMMIT: ${{ needs.linux-contracts.outputs.commit }}
         run: |
@@ -204,6 +206,7 @@ jobs:
             throw 'GitHub release builds require a clean checkout.'
           }
 
+          if ($env:BUILD_ARCHITECTURES -notin @('amd64','amd64,arm64')) { throw 'Unsupported Windows architecture scope.' }
           $publish = $false
           $prerelease = $false
           $tag = ''
@@ -225,7 +228,10 @@ jobs:
             }
           }
 
-          if ($publish -and [version]$version -ge [version]'1.1.7') { throw 'Use AgentDock Workbench Release for complete all-platform publication.' }
+          if ($publish -and ($env:EVENT_NAME -ne 'workflow_dispatch' -or $env:INSTALLATION_TESTS -ne 'true' -or $prerelease -or $env:BUILD_ARCHITECTURES -ne 'amd64')) {
+            throw 'Formal fork publication requires explicit x64 isolated installation acceptance and prerelease=false.'
+          }
+          if ($publish -and ([version]$version -le [version]'1.1.8' -or @('1.1.6100','1.1.16101','1.1.16102','1.1.17100') -contains $version)) { throw 'The distribution version must follow the upstream baseline and never reuse a published fork version.' }
           if (-not [string]::IsNullOrWhiteSpace($tag)) {
             & go run ./tools/release verify-version $tag
             if ($LASTEXITCODE -ne 0) {
@@ -247,28 +253,17 @@ jobs:
           "tag=$tag" | Out-File $env:GITHUB_OUTPUT -Encoding ascii -Append
           "artifact_name=$artifactName" | Out-File $env:GITHUB_OUTPUT -Encoding ascii -Append
 
-      - name: Offscreen desktop layout regression
-        run: |
-          $ErrorActionPreference = 'Stop'
-          dotnet run --project desktop/windows/control-panel-layout-tests/AgentDock.ControlPanel.LayoutTests.csproj --configuration Release -- $PWD (Join-Path $PWD 'dist/layout-validation')
-          if ($LASTEXITCODE -ne 0) { throw 'Offscreen desktop layout validation failed.' }
-
-      - name: Preserve layout evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: desktop-layout-${{ github.run_id }}
-          path: dist/layout-validation/*
-          if-no-files-found: warn
-          retention-days: 30
+      # The required native-acceptance job already runs this exact source's
+      # WPF suite and retains its screenshots. Do not render it a second time.
 
       - name: Backend regression
         run: |
           $ErrorActionPreference = 'Stop'
           # Isolate packages that build real binaries from Windows process/journal
           # fixtures. In-test concurrency, deadlines and assertions are unchanged.
-          go test -p 1 ./... -count=1 -timeout=8m
-          if ($LASTEXITCODE -ne 0) { throw 'Go tests failed.' }
+          New-Item -ItemType Directory -Path dist/windows-package -Force | Out-Null
+          go test -p 1 ./... -count=1 -timeout=8m -json > dist/windows-package/backend-validation.jsonl
+          if ($LASTEXITCODE -ne 0) { Get-Content dist/windows-package/backend-validation.jsonl -Tail 100; throw 'Go tests failed.' }
 
       - name: Static analysis
         run: |
@@ -281,6 +276,20 @@ jobs:
           $ErrorActionPreference = 'Stop'
           dotnet run --project desktop/windows/control-panel-tests/AgentDock.ControlPanel.Tests.csproj --configuration Release
           if ($LASTEXITCODE -ne 0) { throw 'Desktop pure-policy tests failed.' }
+
+      - name: Require complete Korean product validation before publication
+        id: korean
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $required = @('TestMCPAppKoreanDictionaryAndRendererContract','TestAuthorizePageLocalesPreserveEscapingAndConsent','TestKoreanAuthorizeStillRequiresPasswordAndRegisteredRedirect','TestLocalizedTextPersistsRedactsAndClearsOnNewSummary','TestOwnedExecutionDescriptionsPreserveUnrecognizedAndUserText')
+          $events = @(Get-Content dist/windows-package/backend-validation.jsonl | ForEach-Object { $_ | ConvertFrom-Json })
+          foreach ($test in $required) {
+            if (@($events | Where-Object { $_.Test -ceq $test -and $_.Action -ceq 'pass' }).Count -ne 1) { throw "Required Korean regression has not passed: $test" }
+          }
+          if (-not (Test-Path scripts/test/testdata/activity-center/KoreanPresentation.cs -PathType Leaf)) { throw 'The complete Korean presentation regression is missing.' }
+          $result = & dotnet run --project scripts/test/testdata/activity-center/ActivityCenterTests.csproj -c Release -- --localization-only
+          if ($LASTEXITCODE -ne 0 -or -not (($result -join "`n").Contains('Korean presentation acceptance:'))) { throw 'Compiled Korean resources and original-text preservation were not verified.' }
+          $result | Set-Content dist/windows-package/korean-validation.txt -Encoding utf8NoBOM
 
       - name: Windows installer contracts
         run: |
@@ -327,12 +336,51 @@ jobs:
             -SetupPath .\dist\windows-package\release\AgentDockSetup-amd64.exe `
             -LegacyCorePath .\dist\windows-package\payload-amd64\agentdock.exe `
             -LegacyTrayPath .\dist\windows-package\payload-amd64\agentdock-tray.exe `
-            -AllowLegacyTaskMutation
+            -AllowLegacyTaskMutation -EvidenceDirectory (Join-Path $PWD 'dist/windows-package/setup-evidence')
+
+      - name: Verify historical 1.1.16102 upgrade repair and rollback
+        id: upgrade
+        if: github.event_name == 'workflow_dispatch' && inputs.installation_tests == true
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $baselineCommit = '4d719ce75ac748cb24e8ad4b7d92ff7c56e24225'
+          $baselineRoot = Join-Path $env:RUNNER_TEMP 'workbench-historical-source'
+          $baselineOutput = Join-Path $env:RUNNER_TEMP 'workbench-historical-payload'
+          git worktree add --detach $baselineRoot $baselineCommit
+          if ($LASTEXITCODE -ne 0) { throw 'The preserved historical release source is unavailable.' }
+          try {
+            & (Join-Path $baselineRoot 'packaging/windows/build-windows-release.ps1') -Architectures amd64 -OutputDirectory $baselineOutput -CloudflaredBinary (Join-Path $PWD 'dist/windows-package/cloudflared.exe')
+            $baselineReport = Get-Content (Join-Path $baselineOutput 'build-report.json') -Raw | ConvertFrom-Json
+            if ($baselineReport.version -ne '1.1.16102' -or $baselineReport.commit -ne $baselineCommit -or $baselineReport.source_dirty) { throw 'Historical baseline provenance mismatch.' }
+            & ./scripts/test/test-windows-upgrade-isolated.ps1 -Archive (Join-Path $PWD 'dist/windows-package/release/agentdock_windows_amd64.zip') `
+              -BaselineArchive (Join-Path $baselineOutput 'release/agentdock_windows_amd64.zip') `
+              -CloudflaredBinary (Join-Path $PWD 'dist/windows-package/cloudflared.exe') `
+              -InstallerPath (Join-Path $PWD 'scripts/install/install.ps1') `
+              -BaselineInstallerPath (Join-Path $baselineRoot 'scripts/install/install.ps1') -BaselineChannel setup `
+              -ExpectedVersion '${{ steps.metadata.outputs.version }}' -ExerciseRollback `
+              -ReportPath (Join-Path $PWD 'dist/windows-package/upgrade-validation.json')
+            $receipt = Get-Content dist/windows-package/upgrade-validation.json -Raw | ConvertFrom-Json
+            if (-not $receipt.passed -or $receipt.baseline -ne '1.1.16102' -or $receipt.target -ne '${{ steps.metadata.outputs.version }}') { throw 'Historical upgrade did not produce matching acceptance.' }
+          } finally {
+            git worktree remove $baselineRoot
+            if ($LASTEXITCODE -ne 0) { throw 'Historical source cleanup failed; fixture was retained for inspection.' }
+          }
 
       - name: Record verification scope
         run: |
           $installed = '${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.installation_tests }}' -eq 'true'
           $scope = @{
+            schema_version = 1
+            repository = 'eerraa/AgentDock-Workbench'
+            native_architecture = 'amd64'
+            baseline_version = $(if ('${{ steps.upgrade.outcome }}' -eq 'success') { '1.1.16102' } else { '' })
+            baseline_source = '4d719ce75ac748cb24e8ad4b7d92ff7c56e24225'
+            baseline_origin = 'rebuilt_unchanged_historical_release_source'
+            production_touched = $false
+            native_recovery = '${{ needs.native-acceptance.result }}'
+            offscreen_layout = 'passed'
+            korean_validation = $(if ('${{ steps.korean.outcome }}' -eq 'success') { 'passed' } else { 'not_run' })
+            upgrade_recovery = $(if ('${{ steps.upgrade.outcome }}' -eq 'success') { 'passed' } else { 'not_run' })
             version = '${{ steps.metadata.outputs.version }}'
             automated_regression = 'passed'
             metadata_checksums = 'passed'
@@ -344,6 +392,8 @@ jobs:
             linux_backend = 'passed'
             linux_race = 'passed'
           }
+          if ($scope.native_recovery -ne 'success') { throw 'Native recovery job has not passed.' }
+          $scope.native_recovery = 'passed'
           $scope | ConvertTo-Json | Set-Content -Encoding utf8 .\dist\windows-package\verification-scope.json
 
       - name: Upload verified Windows package
@@ -355,7 +405,28 @@ jobs:
             dist/windows-package/build-report.json
             dist/windows-package/verification.json
             dist/windows-package/verification-scope.json
+            dist/windows-package/upgrade-validation.json
+            dist/windows-package/backend-validation.jsonl
+            dist/windows-package/korean-validation.txt
+            dist/windows-package/setup-evidence/*
+            dist/windows-package/upgrade-evidence/*
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Preserve failed candidate evidence without release approval
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unverified-windows-failure-${{ github.run_id }}
+          path: |
+            dist/windows-package/release/*
+            dist/windows-package/build-report.json
+            dist/windows-package/verification.json
+            dist/windows-package/backend-validation.jsonl
+            dist/windows-package/upgrade-validation.json
+            dist/windows-package/setup-evidence/*
+            dist/windows-package/upgrade-evidence/*
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Write build summary
@@ -373,9 +444,12 @@ jobs:
           "@ | Add-Content $env:GITHUB_STEP_SUMMARY
 
   publish:
-    if: needs.build.outputs.publish == 'true'
+    if: github.repository == 'eerraa/AgentDock-Workbench' && needs.build.outputs.publish == 'true'
     needs: [resolve-source, build, linux-contracts]
     name: Publish verified Windows x64 Release
+    concurrency:
+      group: windows-publish-${{ needs.build.outputs.tag }}
+      cancel-in-progress: false
     runs-on: windows-latest
     timeout-minutes: 20
     permissions:
@@ -405,6 +479,13 @@ jobs:
       - name: Verify downloaded package again
         run: |
           $ErrorActionPreference = 'Stop'
+          foreach ($name in @('build-report.json','verification-scope.json')) {
+            $source = Join-Path 'dist/windows-package' $name
+            $target = Join-Path 'dist/windows-package/release' $name
+            Copy-Item -LiteralPath $source -Destination $target
+            $hash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant()
+            [IO.File]::WriteAllText($target+'.sha256', "$hash  $name`n", [Text.UTF8Encoding]::new($false))
+          }
           $report = Get-Content '.\dist\windows-package\build-report.json' -Raw | ConvertFrom-Json
           $architectures = @($report.platforms | ForEach-Object { ($_ -split '/')[1] })
           foreach ($architecture in $architectures) {
@@ -414,7 +495,7 @@ jobs:
             -ExpectedVersion '${{ needs.build.outputs.version }}' `
             -ExpectedCommit '${{ needs.build.outputs.commit }}' `
             -ExpectedChannel release `
-            -ExpectedAuthenticode unsigned -Architecture $architecture -Architectures $architectures | Out-Null
+            -ExpectedAuthenticode unsigned -Architecture $architecture -Architectures $architectures -IncludeMetadata -RequireAcceptance | Out-Null
           }
           $scope = Get-Content '.\dist\windows-package\verification-scope.json' -Raw | ConvertFrom-Json
           $commit = '${{ needs.resolve-source.outputs.commit }}'
@@ -432,87 +513,127 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $false
+          Set-StrictMode -Version Latest
+          $repository = $env:GITHUB_REPOSITORY
           $tag = $env:RELEASE_TAG
           $version = $env:RELEASE_VERSION
+          $commit = $env:RELEASE_COMMIT
+          if ($repository -cne 'eerraa/AgentDock-Workbench' -or $version -notmatch '^\d+\.\d+\.\d+$' -or
+              $tag -cne ('v'+$version) -or $commit -notmatch '^[0-9a-f]{40}$' -or $env:RELEASE_PRERELEASE -cne 'false') {
+              throw 'Publication is restricted to an explicitly verified formal fork release.'
+          }
           $releaseRoot = (Resolve-Path .\dist\windows-package\release).Path
-          $tagCommit = (& git rev-list -n 1 $tag).Trim().ToLowerInvariant()
-          if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $env:RELEASE_COMMIT) {
-            throw "Tag $tag no longer points to the verified commit."
-          }
-          $remoteTag = @(& git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")
-          if ($LASTEXITCODE -ne 0 -or $remoteTag.Count -eq 0) { throw 'Could not verify the current remote release tag.' }
-          $peeled = @($remoteTag | Where-Object { $_ -match '\^\{\}$' })
-          $remoteCommit = (($peeled + $remoteTag)[0] -split '\s+')[0].ToLowerInvariant()
-          if ($remoteCommit -ne $env:RELEASE_COMMIT) { throw 'Remote release tag moved after source resolution.' }
-
-          $exactNotes = Join-Path $PWD "docs\releases\$tag.md"
-          if (Test-Path -LiteralPath $exactNotes -PathType Leaf) {
-            $notes = (Resolve-Path -LiteralPath $exactNotes).Path
-          } else {
-            $matches = @(Get-ChildItem .\docs\releases -File -Filter "$tag-*.md")
-            if ($matches.Count -ne 1) {
-              throw "Publication requires exactly one detailed release note: docs/releases/$tag.md or docs/releases/$tag-*.md."
-            }
-            $notes = $matches[0].FullName
-          }
-
           $title = "AgentDock Workbench $version"
-          & gh release view $tag --repo $env:GITHUB_REPOSITORY --json url *> $null
-          if ($LASTEXITCODE -ne 0) {
-            & gh release create $tag `
-              --repo $env:GITHUB_REPOSITORY `
-              --verify-tag `
-              --draft `
-              --title $title `
-              --notes-file $notes
-            if ($LASTEXITCODE -ne 0) { throw 'Draft release creation failed.' }
+          $marker = "<!-- agentdock-workbench-source:$commit -->"
+          function Assert-RemoteSource {
+              $tagCommit = (& git rev-list -n 1 $tag).Trim().ToLowerInvariant()
+              if ($LASTEXITCODE -ne 0 -or $tagCommit -cne $commit) { throw 'Local release tag moved.' }
+              $remoteTag = @(& git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")
+              if ($LASTEXITCODE -ne 0 -or $remoteTag.Count -eq 0) { throw 'Could not verify the current remote release tag.' }
+              $peeled = @($remoteTag | Where-Object { $_ -match '\^\{\}$' })
+              $remoteCommit = (($peeled + $remoteTag)[0] -split '\s+')[0].ToLowerInvariant()
+              if ($remoteCommit -cne $commit) { throw 'Remote release tag moved after source resolution.' }
+              $main = @(& git ls-remote origin refs/heads/main)
+              if ($LASTEXITCODE -ne 0 -or $main.Count -ne 1 -or ($main[0] -split '\s+')[0] -cne $commit) {
+                  throw 'The canonical remote main is not the verified release commit.'
+              }
           }
-
-          $assets = @(Get-ChildItem $releaseRoot -File | Sort-Object Name)
-          $buildReport = Get-Content .\dist\windows-package\build-report.json -Raw | ConvertFrom-Json
-          $expectedCount = 4 * @($buildReport.platforms).Count + 2
-          if ($assets.Count -ne $expectedCount) { throw "Expected $expectedCount Windows assets, found $($assets.Count)." }
-          & gh release upload $tag @($assets.FullName) `
-            --repo $env:GITHUB_REPOSITORY `
-            --clobber
-          if ($LASTEXITCODE -ne 0) { throw 'Release asset upload failed.' }
-
-          $remote = & gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets,isDraft,isPrerelease,url | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'Could not read the uploaded Release.' }
-          foreach ($asset in $assets) {
-            $remoteAsset = @($remote.assets | Where-Object name -EQ $asset.Name)
-            if ($remoteAsset.Count -ne 1) {
-              throw "Remote asset is missing or duplicated: $($asset.Name)"
-            }
-            if ([long]$remoteAsset[0].size -ne [long]$asset.Length) {
-              throw "Remote asset size mismatch: $($asset.Name)"
-            }
-            $digest = 'sha256:' + (Get-FileHash $asset.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            if ([string]$remoteAsset[0].digest -ne $digest) {
-              throw "Remote asset digest mismatch: $($asset.Name)"
-            }
+          function Read-Release {
+              # A failed lookup is unknown, never evidence that a release is absent.
+              $raw = & gh api "repos/$repository/releases?per_page=100" --paginate --slurp
+              if ($LASTEXITCODE -ne 0) { throw 'Release lookup failed; no publication state was inferred.' }
+              $pages = ($raw -join "`n") | ConvertFrom-Json
+              $matches = @($pages | ForEach-Object { $_ } | Where-Object { $_.tag_name -ceq $tag })
+              if ($matches.Count -gt 1) { throw 'Duplicate release identity.' }
+              if ($matches.Count -eq 1) { return $matches[0] }
+              return $null
           }
-
-          $editArguments = @(
-            'release', 'edit', $tag,
-            '--repo', $env:GITHUB_REPOSITORY,
-            '--title', $title,
-            '--notes-file', $notes,
-            '--draft=false'
-          )
-          if ($env:RELEASE_PRERELEASE -eq 'true') {
-            $editArguments += '--prerelease=true'
+          $assets = @(Get-ChildItem -LiteralPath $releaseRoot -File | Sort-Object Name)
+          if ($assets.Count -ne 10) { throw 'Expected the six x64 payload/checksum files and four metadata/checksum files.' }
+          $digests = @{}
+          foreach ($asset in $assets) { $digests[$asset.Name] = (Get-FileHash -LiteralPath $asset.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+          function Assert-RemoteAssets($Release, [bool]$Complete) {
+              if ($null -eq $Release -or $Release.tag_name -cne $tag -or $Release.name -cne $title -or
+                  -not ([string]$Release.body).Contains($marker)) { throw 'Release is not bound to this source and product.' }
+              $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+              foreach ($remoteAsset in @($Release.assets)) {
+                  $local = @($assets | Where-Object { $_.Name -ceq $remoteAsset.name })
+                  if (-not $seen.Add([string]$remoteAsset.name) -or $local.Count -ne 1) { throw 'Unexpected or duplicate remote asset.' }
+                  if ($remoteAsset.state -cne 'uploaded' -or [long]$remoteAsset.size -ne $local[0].Length -or
+                      $remoteAsset.digest -cne ('sha256:'+$digests[$local[0].Name])) {
+                      throw "Existing asset is different or incomplete; it will not be overwritten: $($remoteAsset.name)"
+                  }
+              }
+              if ($Complete -and $seen.Count -ne $assets.Count) { throw 'Remote asset inventory is incomplete.' }
+          }
+          function Verify-DownloadedRelease([string]$Phase) {
+              $directory = Join-Path $env:RUNNER_TEMP ('workbench-'+$Phase+'-'+[guid]::NewGuid().ToString('N'))
+              New-Item -ItemType Directory -Path $directory | Out-Null
+              & gh release download $tag --repo $repository --dir $directory
+              if ($LASTEXITCODE -ne 0) { throw "Actual $Phase asset download failed; evidence remains at $directory" }
+              $downloaded = @(Get-ChildItem -LiteralPath $directory -File)
+              if (@(Compare-Object @($assets.Name | Sort-Object) @($downloaded.Name | Sort-Object) -CaseSensitive).Count -ne 0) { throw 'Downloaded asset inventory differs.' }
+              foreach ($file in $downloaded) {
+                  if ((Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -cne $digests[$file.Name]) {
+                      throw "Downloaded bytes differ: $($file.Name)"
+                  }
+              }
+              & .\scripts\test\verify-windows-release-assets.ps1 -ReleaseDirectory $directory `
+                  -BuildReport (Join-Path $directory 'build-report.json') -ExpectedVersion $version -ExpectedCommit $commit `
+                  -ExpectedChannel release -ExpectedAuthenticode unsigned -Architecture amd64 -Architectures amd64 `
+                  -IncludeMetadata -RequireAcceptance | Out-Null
+              return [ordered]@{phase=$Phase;directory=$directory;actual_redownload=$true;files=$assets.Count;sha256=$digests}
+          }
+          Assert-RemoteSource
+          & .\scripts\test\verify-windows-release-assets.ps1 -ReleaseDirectory $releaseRoot `
+              -BuildReport (Join-Path $releaseRoot 'build-report.json') -ExpectedVersion $version -ExpectedCommit $commit `
+              -ExpectedChannel release -ExpectedAuthenticode unsigned -Architecture amd64 -Architectures amd64 `
+              -IncludeMetadata -RequireAcceptance | Out-Null
+          $exactNotes = Join-Path $PWD "docs\releases\$tag.md"
+          if (Test-Path -LiteralPath $exactNotes -PathType Leaf) { $notes = $exactNotes } else {
+              $matches = @(Get-ChildItem .\docs\releases -File -Filter "$tag-*.md")
+              if ($matches.Count -ne 1) { throw "Publication requires exactly one detailed release note: docs/releases/$tag.md or docs/releases/$tag-*.md." }
+              $notes = $matches[0].FullName
+          }
+          $publicationNotes = Join-Path $env:RUNNER_TEMP ('workbench-notes-'+[guid]::NewGuid().ToString('N')+'.md')
+          [IO.File]::WriteAllText($publicationNotes, ([IO.File]::ReadAllText($notes)+"`n`n"+$marker+"`n"), [Text.UTF8Encoding]::new($false))
+          $release = Read-Release
+          if ($null -ne $release) {
+              if (-not $release.draft) { throw 'An already published release is immutable; no asset or metadata was changed.' }
+              Assert-RemoteAssets $release $false
           } else {
-            $editArguments += @('--prerelease=false', '--latest')
+              & gh release create $tag --repo $repository --verify-tag --draft --title $title --notes-file $publicationNotes
+              if ($LASTEXITCODE -ne 0) { throw 'Draft creation result was not confirmed; inspect remote state before resuming.' }
+              $release = Read-Release
+              Assert-RemoteAssets $release $false
           }
-          & gh @editArguments
-          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }
+          $missing = @($assets | Where-Object { $localName=$_.Name; @($release.assets | Where-Object { $_.name -ceq $localName }).Count -eq 0 })
+          if ($missing.Count -gt 0) {
+              & gh release upload $tag @($missing.FullName) --repo $repository
+              if ($LASTEXITCODE -ne 0) { throw 'Asset upload did not complete; the existing draft and bytes were retained.' }
+          }
+          $release = Read-Release
+          if (-not $release.draft) { throw 'Release state changed before draft verification.' }
+          Assert-RemoteAssets $release $true
+          $draftDownload = Verify-DownloadedRelease 'draft'
+          Assert-RemoteSource
+          & gh release edit $tag --repo $repository --title $title --notes-file $publicationNotes --draft=false --prerelease=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Publication result is unknown; inspect remote state before resuming.' }
+          $final = Read-Release
+          if ($null -eq $final -or $final.draft -or $final.prerelease) { throw 'Formal release state was not confirmed.' }
+          Assert-RemoteAssets $final $true
+          $publicDownload = Verify-DownloadedRelease 'published'
+          $latestRaw = & gh api "repos/$repository/releases/latest"
+          if ($LASTEXITCODE -ne 0 -or (($latestRaw -join "`n") | ConvertFrom-Json).id -ne $final.id) { throw 'Latest release identity was not confirmed.' }
+          [ordered]@{repository=$repository;tag=$tag;version=$version;commit=$commit;draft=$false;prerelease=$false;url=$final.html_url;draft_verification=$draftDownload;published_verification=$publicDownload} |
+              ConvertTo-Json -Depth 8 | Set-Content -LiteralPath .\dist\windows-package\publication-verification.json -Encoding utf8NoBOM
+          "## Published Release`n`n$($final.html_url)" | Add-Content $env:GITHUB_STEP_SUMMARY
 
-          $final = & gh release view $tag --repo $env:GITHUB_REPOSITORY --json isDraft,isPrerelease,url | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0 -or $final.isDraft) {
-            throw 'Release remained in draft state.'
-          }
-          if ([bool]$final.isPrerelease -ne ($env:RELEASE_PRERELEASE -eq 'true')) {
-            throw 'Release prerelease state does not match the requested state.'
-          }
-          "## Published Release`n`n$($final.url)" | Add-Content $env:GITHUB_STEP_SUMMARY
+      - name: Preserve actual publication verification
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-publication-${{ github.run_id }}
+          path: dist/windows-package/publication-verification.json
+          if-no-files-found: warn
+          retention-days: 30

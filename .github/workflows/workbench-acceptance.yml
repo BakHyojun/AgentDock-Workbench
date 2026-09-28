@@ -6,26 +6,25 @@ on:
         description: 'Exact source SHA to validate without publishing'
         required: true
         type: string
+      architectures:
+        type: string
+        default: 'amd64,arm64'
   workflow_call:
     inputs:
       ref:
         required: true
         type: string
+      architectures:
+        type: string
+        default: 'amd64,arm64'
 permissions:
   contents: read
 jobs:
   native-windows:
-    if: github.repository_id == '1370391430'
+    if: github.repository == 'eerraa/AgentDock-Workbench'
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - runner: windows-latest
-            arch: amd64
-            rid: win-x64
-          - runner: windows-11-arm
-            arch: arm64
-            rid: win-arm64
+      matrix: ${{ fromJSON(inputs.architectures == 'amd64' && '{"include":[{"runner":"windows-latest","arch":"amd64","rid":"win-x64"}]}' || '{"include":[{"runner":"windows-latest","arch":"amd64","rid":"win-x64"},{"runner":"windows-11-arm","arch":"arm64","rid":"win-arm64"}]}') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     defaults:
@@ -48,6 +47,7 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Verify isolated native target
         run: |
+          if ('${{ inputs.architectures }}' -notin @('amd64','amd64,arm64')) { throw 'Unsupported native architecture scope.' }
           if ($env:EXPECTED_COMMIT -notmatch '^[a-f0-9]{40}$' -or (git rev-parse HEAD) -ne $env:EXPECTED_COMMIT) { throw 'Source must match exact SHA' }
           if ((go env GOARCH) -ne '${{ matrix.arch }}') { throw 'Native toolchain architecture mismatch' }
           New-Item -ItemType Directory -Force dist/native-validation | Out-Null

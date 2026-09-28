@@ -101,3 +101,19 @@ func TestWindowsTaskRollbackRetainsRuntimeOwner(t *testing.T) {
 		}
 	}
 }
+
+func TestFormalWindowsBuildRequiresCleanSourceForEveryVersion(t *testing.T) {
+	data, err := os.ReadFile("../../packaging/windows/build-windows-release.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(data)
+	if !strings.Contains(source, "if (-not $Candidate -and $sourceChanges.Count -gt 0)") {
+		t.Error("formal clean-source gate is missing or limited to a historical version")
+	}
+	for _, required := range []string{"source_state_changed", "repository='eerraa/AgentDock-Workbench'"} {
+		if !strings.Contains(source, required) {
+			t.Errorf("formal build provenance guard missing: %s", required)
+		}
+	}
+}

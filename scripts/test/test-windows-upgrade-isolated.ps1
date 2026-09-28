@@ -7,6 +7,7 @@ param(
     [string]$ExpectedVersion='1.0.0',
     [string]$InstallerPath='',
     [string]$BaselineInstallerPath='',
+    [string]$EvidenceDirectory='',
     [ValidateSet('script','setup')][string]$BaselineChannel='script',
     [switch]$SeedStaleEnvironment,
     [switch]$ExerciseRollback
@@ -22,6 +23,8 @@ $Archive=(Resolve-Path -LiteralPath $Archive).Path
 $BaselineArchive=(Resolve-Path -LiteralPath $BaselineArchive).Path
 $CloudflaredBinary=(Resolve-Path -LiteralPath $CloudflaredBinary).Path
 $ReportPath=[IO.Path]::GetFullPath($ReportPath)
+if(-not $EvidenceDirectory){$EvidenceDirectory=Join-Path ([IO.Path]::GetDirectoryName($ReportPath)) 'upgrade-evidence'}
+$EvidenceDirectory=[IO.Path]::GetFullPath($EvidenceDirectory)
 $utf8=New-Object Text.UTF8Encoding($false)
 $testRoot=Join-Path ([IO.Path]::GetTempPath()) ('agentdock upgrade 回归 '+[Guid]::NewGuid().ToString('N'))
 $runtimeRoot=Join-Path $testRoot '安装目录 with spaces'
@@ -39,9 +42,12 @@ $cases=New-Object Collections.Generic.List[object]
 $allPassed=$false
 $baselineVersion=''
 $targetVersion=''
+$currentPhase='preflight'
+$installerRuns=New-Object Collections.Generic.List[object]
+$diagnosticEvidence=@()
 
 function Save-Report {
-    $report=[ordered]@{ passed=$allPassed; baseline=$baselineVersion; target=$targetVersion; platform='windows/amd64'; privilege='standard'; custom_path='Chinese and spaces'; stale_runtime_environment=[bool]$SeedStaleEnvironment; install_channel='setup script'; gui_window='not asserted (shared desktop singleton)'; cases=@($cases.ToArray()) }
+    $report=[ordered]@{ passed=$allPassed; baseline=$baselineVersion; target=$targetVersion; platform='windows/amd64'; privilege='standard'; custom_path='Chinese and spaces'; stale_runtime_environment=[bool]$SeedStaleEnvironment; install_channel='setup script'; gui_window='not asserted (shared desktop singleton)'; phase=$currentPhase; installer_runs=@($installerRuns.ToArray()); diagnostic_evidence=@($diagnosticEvidence); cases=@($cases.ToArray()) }
     [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($ReportPath)) | Out-Null
     [IO.File]::WriteAllText($ReportPath,($report|ConvertTo-Json -Depth 8),$utf8)
 }
@@ -49,6 +55,42 @@ function Record-Case([string]$Name){
     $cases.Add([ordered]@{name=$Name;passed=$true})
     Save-Report
     Write-Host "PASS: $Name"
+}
+function Protect-InstallerDiagnostic([string]$Text) {
+    # Synthetic fixture logs can contain generated credentials, including INI keys.
+    $Text=$Text -replace '(?im)((?:Bearer[ _-]?Token|Auth[ _-]?Token|OAuth[ _-]?(?:login[ _-]?)?password|OAuth[ _-]?(?:token[ _-]?)?secret|Tunnel[ _-]?Token)\s*[:=])[^\r\n]*','$1 [REDACTED]'
+    $Text=$Text -replace '(?i)(Authorization\s*[:=]\s*)(?:Bearer|Basic)\s+[^\s\r\n]+','$1[REDACTED]'
+    return $Text
+}
+function Export-UpgradeDiagnostics {
+    [IO.Directory]::CreateDirectory($EvidenceDirectory) | Out-Null
+    $records=New-Object Collections.Generic.List[object]
+    foreach($phase in @('baseline','injected-rollback','upgrade','same-version-repair')) {
+        foreach($extension in @('.log','.ini')) {
+            $name=$phase+$extension
+            $source=Join-Path $testRoot $name
+            if(-not (Test-Path -LiteralPath $source -PathType Leaf)){continue}
+            $item=Get-Item -LiteralPath $source
+            $record=[ordered]@{name=$name;bytes=$item.Length;exported=$false;reason='';source_sha256=$null;redacted_sha256=$null}
+            if($item.Length -gt 1048576){$record.reason='log_exceeds_1MiB_limit';$records.Add($record);continue}
+            $record.source_sha256=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+            $reader=[IO.StreamReader]::new($source,$true)
+            try {
+                $buffer=[char[]]::new(524289)
+                $count=$reader.ReadBlock($buffer,0,$buffer.Length)
+                if($count -gt 524288){$record.reason='text_exceeds_524288_character_limit';$records.Add($record);continue}
+                $safe=Protect-InstallerDiagnostic ([string]::new($buffer,0,$count))
+                $target=Join-Path $EvidenceDirectory $name
+                if(Test-Path -LiteralPath $target){throw "Previous diagnostic evidence will not be overwritten: $name"}
+                [IO.File]::WriteAllText($target,$safe,$utf8)
+                $record.redacted_sha256=(Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant()
+                $record.exported=$true
+                $record.reason='redacted_fixture_diagnostic'
+                $records.Add($record)
+            } finally {$reader.Dispose()}
+        }
+    }
+    return @($records.ToArray())
 }
 function Read-Health([string]$Expected){
     $deadline=[DateTime]::UtcNow.AddSeconds(30)
@@ -78,6 +120,9 @@ function Assert-Preserved([bool]$AllowLegacy=$false) {
     }
 }
 function Run-Installer([string]$Payload,[string]$Channel,[string]$Script,[string]$Name,[bool]$ExpectFailure=$false){
+    $script:currentPhase=$Name
+    $scriptHash=(Get-FileHash -LiteralPath $Script -Algorithm SHA256).Hash.ToLowerInvariant()
+    $archiveHash=(Get-FileHash -LiteralPath $Payload -Algorithm SHA256).Hash.ToLowerInvariant()
     $log=Join-Path $testRoot ($Name+'.log')
     $result=Join-Path $testRoot ($Name+'.ini')
     $args=@('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$Script,
@@ -91,11 +136,16 @@ function Run-Installer([string]$Payload,[string]$Channel,[string]$Script,[string
         & powershell.exe @args *> $log
         $exit=$LASTEXITCODE
     } finally {$ErrorActionPreference=$previousErrorAction}
+    $unchanged=$scriptHash -ceq (Get-FileHash -LiteralPath $Script -Algorithm SHA256).Hash.ToLowerInvariant() -and $archiveHash -ceq (Get-FileHash -LiteralPath $Payload -Algorithm SHA256).Hash.ToLowerInvariant()
+    $installerRuns.Add([ordered]@{phase=$Name;exit_code=$exit;expected_failure=$ExpectFailure;script_sha256=$scriptHash;archive_sha256=$archiveHash;inputs_unchanged=$unchanged})
+    Save-Report
+    if(-not $unchanged){throw "$Name inputs changed while the installer was running"}
     if($ExpectFailure){
         if($exit -eq 0){throw "$Name unexpectedly succeeded"}
+        if(-not (Select-String -LiteralPath $log -SimpleMatch 'isolated-test: fail after Engine trial, before commit' -Quiet)){throw "$Name failed before reaching the required injected trial boundary"}
     }elseif($exit -ne 0){
         # Never print generated credentials from installer output.
-        $safe=(Get-Content -LiteralPath $log -Raw) -replace '(?im)(Bearer Token:|OAuth login password:)[^\r\n]*','$1 [REDACTED]'
+        $safe=Protect-InstallerDiagnostic (Get-Content -LiteralPath $log -Raw)
         throw "$Name failed with exit $exit`n$safe"
     }
 }
@@ -146,6 +196,7 @@ try{
     Assert-Preserved
     if(@(Get-ChildItem (Join-Path $runtimeRoot 'versions') -Directory -Filter '.repair-backup-*').Count -ne 0){throw 'Same-version repair left a backup generation'}
     Record-Case 'Same-version overwrite commits without leftover repair generation'
+    $currentPhase='completed'
     $allPassed=$true
 }catch{
     $cases.Add([ordered]@{name='failure';passed=$false;message=$_.Exception.Message.Split([Environment]::NewLine)[0]})
@@ -167,7 +218,11 @@ try{
     [Environment]::SetEnvironmentVariable('Path',$cleanPath,'User')
     Get-ChildItem Env:AGENTDOCK_* | ForEach-Object {[Environment]::SetEnvironmentVariable($_.Name,$null,'Process')}
     foreach($key in $oldEnv.Keys){[Environment]::SetEnvironmentVariable($key,$oldEnv[$key],'Process')}
+    $exportFailed=$false
+    try {$diagnosticEvidence=@(Export-UpgradeDiagnostics)}
+    catch {$exportFailed=$true;$allPassed=$false;$cases.Add([ordered]@{name='diagnostic evidence export';passed=$false;message=$_.Exception.Message});Write-Warning 'Upgrade diagnostic export failed; original fixture remains available.'}
     Save-Report
     if($allPassed){Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue}
     else{Write-Host "Isolated failure fixtures retained: $testRoot"}
+    if($exportFailed -and $currentPhase -eq 'completed'){throw 'Upgrade checks passed, but required diagnostic evidence could not be preserved.'}
 }

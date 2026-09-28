@@ -16,11 +16,32 @@ param(
     [ValidateSet('signed', 'unsigned')]
     [string] $ExpectedAuthenticode = 'unsigned',
     [ValidateSet('amd64','arm64')][string] $Architecture = 'amd64',
-    [ValidateSet('amd64','arm64')][string[]] $Architectures = @('amd64')
+    [ValidateSet('amd64','arm64')][string[]] $Architectures = @('amd64'),
+    [switch] $IncludeMetadata,
+    [switch] $RequireAcceptance
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Publication consumes evidence from the existing build/test owners. Candidate
+# packaging is not installation acceptance and cannot satisfy this contract.
+function Assert-WindowsReleaseAcceptance {
+    param($Scope, [string]$Version, [string]$Commit)
+    if ($Scope.schema_version -ne 1 -or $Scope.repository -cne 'eerraa/AgentDock-Workbench' -or
+        $Scope.version -cne $Version -or $Scope.commit -cne $Commit -or
+        $Scope.resolved_commit -cne $Commit -or $Scope.linux_tested_commit -cne $Commit) {
+        throw 'release_acceptance_identity: evidence does not identify the verified fork source.'
+    }
+    if ([version]$Version -le [version]'1.1.8' -or @('1.1.6100','1.1.16101','1.1.16102','1.1.17100') -contains $Version -or $Scope.native_architecture -cne 'amd64' -or
+        $Scope.baseline_version -cne '1.1.16102' -or $Scope.production_touched -isnot [bool] -or $Scope.production_touched) {
+        throw 'release_acceptance_scope: native x64, a newer version and an isolated historical upgrade are required.'
+    }
+    foreach ($name in @('automated_regression','metadata_checksums','linux_backend','linux_race',
+                       'native_recovery','offscreen_layout','korean_validation','installation_tests','upgrade_recovery')) {
+        if ($Scope.$name -cne 'passed') { throw "release_acceptance_incomplete: $name has not passed." }
+    }
+}
 
 function Resolve-RequiredFile {
     param([string] $Path, [string] $Description)
@@ -97,8 +118,16 @@ if ($Architectures -notcontains $Architecture -or @($Architectures | Select-Obje
 $expectedNames = @('install.ps1','install.ps1.sha256') + @($Architectures | ForEach-Object {
     "AgentDockSetup-$_.exe"; "AgentDockSetup-$_.exe.sha256"; "agentdock_windows_$_.zip"; "agentdock_windows_$_.zip.sha256"
 }) | Sort-Object
+if ($RequireAcceptance -and (-not $IncludeMetadata -or $ExpectedChannel -ne 'release' -or
+    $Architecture -ne 'amd64' -or $Architectures.Count -ne 1 -or $Architectures[0] -ne 'amd64')) {
+    throw 'Formal publication requires native x64 acceptance and checksummed release metadata.'
+}
+if ($IncludeMetadata) {
+    $expectedNames += @('build-report.json','build-report.json.sha256','verification-scope.json','verification-scope.json.sha256')
+    $expectedNames = @($expectedNames | Sort-Object)
+}
 $actualNames = @(Get-ChildItem -LiteralPath $releaseRoot -File | Select-Object -ExpandProperty Name | Sort-Object)
-$difference = @(Compare-Object -ReferenceObject $expectedNames -DifferenceObject $actualNames)
+$difference = @(Compare-Object -ReferenceObject $expectedNames -DifferenceObject $actualNames -CaseSensitive)
 if ($difference.Count -ne 0) {
     throw "Unexpected Windows release asset set: $($actualNames -join ', ')"
 }
@@ -111,6 +140,19 @@ foreach ($name in @("AgentDockSetup-$Architecture.exe", "agentdock_windows_$Arch
 }
 
 $report = [IO.File]::ReadAllText($reportPath) | ConvertFrom-Json
+if ($IncludeMetadata) {
+    foreach ($name in @('build-report.json','verification-scope.json')) {
+        $path = Join-Path $releaseRoot $name
+        if ((Get-Item -LiteralPath $path).Length -gt 65536) { throw 'Oversized release metadata.' }
+        $digests[$name] = Assert-Checksum $path ($path + '.sha256')
+    }
+    if ($digests['build-report.json'] -cne (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant()) {
+        throw 'Published build report differs from the verified build report.'
+    }
+    $scope = Get-Content -LiteralPath (Join-Path $releaseRoot 'verification-scope.json') -Raw | ConvertFrom-Json
+    if ($RequireAcceptance) { Assert-WindowsReleaseAcceptance $scope $ExpectedVersion $ExpectedCommit.ToLowerInvariant() }
+}
+if ($report.repository -cne 'eerraa/AgentDock-Workbench') { throw 'Build report points to another distribution.' }
 if ([string]$report.version -ne $ExpectedVersion) {
     throw "Build report version mismatch: $($report.version)"
 }
@@ -157,10 +199,20 @@ try {
         if ($image.Length -lt 64) { throw 'Invalid PE header.' }
         $pe = [BitConverter]::ToInt32($image,0x3c)
         if ($pe -lt 0 -or $pe + 26 -gt $image.Length -or [BitConverter]::ToUInt32($image,$pe) -ne 0x4550 -or [BitConverter]::ToUInt16($image,$pe+4) -ne $expectedMachine) { throw "Incorrect PE architecture: $binaryName" }
+        if ($binaryName -ne 'agentdock-tray.exe') {
+            $metadata = (& go version -m $binaryPath | Out-String)
+            if ($LASTEXITCODE -ne 0 -or -not $metadata.Contains('GOARCH='+$Architecture) -or -not $metadata.Contains($ExpectedCommit)) {
+                throw "Packaged executable source identity mismatch: $binaryName"
+            }
+        }
     }
     $buildMetadata = (& go version -m $corePath | Out-String)
     if ($LASTEXITCODE -ne 0 -or -not $buildMetadata.Contains('GOARCH='+$Architecture) -or -not $buildMetadata.Contains($ExpectedCommit)) { throw 'Packaged Core build metadata does not match the verified source/architecture.' }
     $desktopProduct = (Get-Item (Join-Path $temporaryRoot 'agentdock-tray.exe')).VersionInfo.ProductName
+    $desktopVersion = (Get-Item (Join-Path $temporaryRoot 'agentdock-tray.exe')).VersionInfo.ProductVersion
+    if ($desktopVersion -cne ($ExpectedVersion + '+' + $ExpectedCommit.ToLowerInvariant())) {
+        throw 'Packaged desktop version/source commit mismatch.'
+    }
     $packagedLicense = Resolve-RequiredFile (Join-Path $temporaryRoot 'share\agentdock\LICENSE') 'Repository license'
     if ((Get-FileHash -LiteralPath $packagedLicense -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot '..\..\LICENSE') -Algorithm SHA256).Hash) { throw 'Windows package license mismatch.' }
     if ($desktopProduct -ne 'AgentDock Workbench') { throw "Unexpected desktop product name: $desktopProduct" }

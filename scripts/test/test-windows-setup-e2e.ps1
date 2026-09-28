@@ -8,7 +8,8 @@ param(
     [string] $LegacyTrayPath,
     [string] $InstallRoot = '',
     [int] $Port = 8765,
-    [switch] $AllowLegacyTaskMutation
+    [switch] $AllowLegacyTaskMutation,
+    [string] $EvidenceDirectory = ''
 )
 
 Set-StrictMode -Version Latest
@@ -646,11 +647,21 @@ try {
     }
     throw
 } finally {
+    try { if (-not [string]::IsNullOrWhiteSpace($EvidenceDirectory)) {
+        New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
+        # Copy only this test's known installer logs, never an entire user home
+        # or runtime directory containing generated credentials.
+        foreach ($log in @($setupLogPath, $repeatLogPath, $repairLogPath, $uninstallLogPath)) {
+            if (Test-Path -LiteralPath $log -PathType Leaf) {
+                Get-Content -LiteralPath $log -Tail 2000 | Set-Content -LiteralPath (Join-Path $EvidenceDirectory ([IO.Path]::GetFileName($log))) -Encoding utf8
+            }
+        }
+    } } catch { Write-Warning "Could not retain installer evidence; fixture cleanup continues: $($_.Exception.Message)" }
     $env:AGENTDOCK_RELEASE_BASE_URL = $oldReleaseBaseUrl
     $env:AGENTDOCK_CLOUDFLARED_RELEASE_BASE_URL = $oldCloudflaredReleaseBaseUrl
     Stop-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -Confirm:$false -ErrorAction SilentlyContinue
-    foreach ($process in @($setupProcess, $repairProcess, $uninstallProcess)) {
+    foreach ($process in @($setupProcess, $repeatProcess, $repairProcess, $uninstallProcess)) {
         if ($process -and -not $process.HasExited) {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         }
