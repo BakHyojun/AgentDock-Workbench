@@ -25,7 +25,11 @@ cua-driver status            # "Cua Driver daemon is running", socket \\.\pipe\c
 cua-driver autostart status  # "registered (running)"
 cua-driver check-update
 cua-driver update --apply
+cua-driver stop              # 업데이트 뒤: 이전 버전 데몬 종료
+cua-driver autostart kick    # 새 버전 데몬 시작
 ```
+
+`update --apply`는 실행 중인 데몬을 바꾸지 않는다. 이전 데몬이 남으면 새 CLI(`cua-driver mcp`)와 계약 버전이 맞지 않아 도구 호출이 실패한다. 데몬을 다시 띄운 뒤 AgentDock의 연결도 새로 만든다: "기능과 플러그인"에서 MCP 서버 `cua-driver`를 껐다 켜거나, 에이전트에게 `mcp_manage` `{"action":"refresh","name":"cua-driver"}`를 호출하게 한다. AgentDock은 끊긴 MCP 연결을 스스로 다시 잇지 않는다.
 
 데몬이 없으면 플러그인은 설치돼도 도구 목록을 가져오지 못한다. 자동 실행 작업은 UWP 앱 조작을 위해 관리자 권한(HighestAvailable)으로 등록되므로 관리자 창도 조작할 수 있다. 그만큼 원격 에이전트의 권한도 커진다.
 

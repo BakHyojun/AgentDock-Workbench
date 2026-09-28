@@ -62,6 +62,18 @@ grant covers only that `cua-driver:<tool>`.
 - Stop and report if the user takes over the mouse or keyboard, a window you
   did not expect appears, or observations stop matching your actions.
 
+## If the server fails
+
+A connection error, a version or contract mismatch between the `cua-driver`
+CLI and its daemon, or an empty tool list means the user's daemon must be
+fixed, usually after a `cua-driver` update left the old daemon running.
+Do not start, stop or replace cua-driver processes or daemons through a shell,
+and do not work around the daemon with a private one. Report the error and ask
+the user to run `cua-driver stop` and then `cua-driver autostart kick` in a
+normal PowerShell. After the user confirms, call `mcp_manage` with
+`{"action":"refresh","name":"cua-driver"}` and continue only if it reports the
+server ready.
+
 ## Limits
 
 - Each call has a 30 second default timeout in AgentDock; long waits belong in

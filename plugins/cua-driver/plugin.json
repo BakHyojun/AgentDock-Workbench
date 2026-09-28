@@ -1,6 +1,6 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cua-driver",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "See and control this Windows desktop through the local CUA cua-driver daemon (screenshots, accessibility tree, background input, apps, windows and browsers)."
 }
