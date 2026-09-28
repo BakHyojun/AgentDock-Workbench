@@ -23,6 +23,8 @@ type DisplaySettings struct {
 	ChatGPTMCPUIEnabled bool               `json:"chatgpt_mcp_ui_enabled"`
 	ToolOutput          ToolOutputSettings `json:"tool_output"`
 	Warning             string             `json:"warning,omitempty"`
+	WarningCode         string             `json:"warning_code,omitempty"`
+	WarningDetail       string             `json:"warning_detail,omitempty"`
 }
 
 type DisplayChange struct {
@@ -89,6 +91,8 @@ func NewDisplayPreferences(home string, legacyEnabled bool) *DisplayPreferences 
 		store.loadError = err
 		settings.ChatGPTMCPUIEnabled = false
 		settings.Warning = "Display preferences could not be loaded; the original file was preserved. " + err.Error()
+		settings.WarningCode = "display_preferences_load_failed"
+		settings.WarningDetail = err.Error()
 	}
 	store.current.Store(&settings)
 	return store

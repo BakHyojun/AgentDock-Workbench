@@ -40,9 +40,11 @@ func (p *callProjection) applyCallBinding(call *ExecutionCall, event Event, id s
 	}
 	if call.Label == "" {
 		call.Label = event.Label
+		call.LabelSource = event.LabelSource
 	}
 	if call.Title == "" || event.Kind == "call.bound" {
 		call.Title = event.Title
+		call.TitleText = event.TitleText.clone()
 	}
 	if call.ToolName == "" {
 		call.ToolName = event.ToolName
@@ -129,6 +131,7 @@ func applyCallExecutionFacts(call *ExecutionCall, event Event) {
 	}
 	if event.Summary != "" && (call.Summary == "" || strings.HasPrefix(event.Kind, "call.") || event.Kind == "tool.completed" || event.Kind == "command.completed") {
 		call.Summary = event.Summary
+		call.SummaryText = event.SummaryText.clone()
 	}
 	if event.ExitCode != nil {
 		value := *event.ExitCode
