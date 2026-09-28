@@ -56,7 +56,7 @@ func RunLocalArchive(ctx context.Context, archivePath, checksumPath, targetVersi
 	}
 	defer os.RemoveAll(tempDir)
 
-	payload, err := extractWindowsReleasePayload(archiveData, tempDir, executableName, targetVersion)
+	payload, err := extractWindowsReleasePayload(ctx, archiveData, tempDir, executableName, targetVersion)
 	if err != nil {
 		return fmt.Errorf("extract local Windows Release payload: %w", err)
 	}

@@ -6,6 +6,22 @@ import (
 	"testing"
 )
 
+// Setup refuses an x64 payload without the pinned rg component because the
+// installer engine accepts its absence for legacy payloads.
+func TestWindowsSetupRequiresBundledRgAfterExtraction(t *testing.T) {
+	data, err := os.ReadFile("../install/install.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(data)
+	extract := strings.Index(source, "Expand-AgentDockReleaseArchive -ArchivePath $archivePath -DestinationPath $extractDir")
+	check := strings.Index(source, "Assert-AgentDockBundledRgPayload -ExtractDir $extractDir -Architecture $architecture")
+	firstUse := strings.Index(source, "& $sourceBinary ")
+	if extract < 0 || check < extract || firstUse < check {
+		t.Fatalf("Setup must check the rg component after extraction and before using the new Core: %d %d %d", extract, check, firstUse)
+	}
+}
+
 func TestWindowsTaskRollbackRetainsRuntimeOwner(t *testing.T) {
 	data, err := os.ReadFile("../install/install.ps1")
 	if err != nil {

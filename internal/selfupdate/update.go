@@ -237,7 +237,7 @@ func run(ctx context.Context, opts options) error {
 		inspection.DesktopArchiveAsset.Name == archiveAsset.Name &&
 		inspection.DesktopArchiveAsset.URL == archiveAsset.URL
 	if sharedWindowsArchive {
-		payload, extractErr := extractWindowsReleasePayload(archiveData, tempDir, executableName, targetVersion)
+		payload, extractErr := extractWindowsReleasePayload(ctx, archiveData, tempDir, executableName, targetVersion)
 		if extractErr != nil {
 			return fmt.Errorf("解压 Windows Release payload 失败: %w", extractErr)
 		}

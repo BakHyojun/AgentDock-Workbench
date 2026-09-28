@@ -135,6 +135,11 @@ if ([string]$report.cloudflared_authenticode -ne 'valid') {
 }
 
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ('agentdock-release-verify-' + [Guid]::NewGuid().ToString('N'))
+$rgVerification = $null
+if ($Architecture -eq 'amd64') {
+    $rgVerification = & (Join-Path $PSScriptRoot '..\..\packaging\windows\prepare-bundled-rg.ps1') `
+        -ArchivePath (Join-Path $releaseRoot "agentdock_windows_$Architecture.zip")
+}
 New-Item -ItemType Directory -Path $temporaryRoot | Out-Null
 try {
     Expand-Archive `
@@ -224,6 +229,7 @@ if ($setupVersion -ne $ExpectedVersion) {
     agentdock_authenticode = $ExpectedAuthenticode
     cloudflared_authenticode = 'valid'
     core_skill_bootstrap = @{ fresh = $bootstrapState; repeat = $bootstrapState; count = $expectedSkills.Count }
+    bundled_ripgrep = $rgVerification
     assets = $digests
     verified_at = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
 } | ConvertTo-Json -Depth 5

@@ -6,6 +6,19 @@
 review_threshold_lines: 300
 
 scripts:
+  - path: packaging/windows/prepare-bundled-rg.ps1
+    class: packaging
+    owner: release
+    public_contract: false
+    deletable: false
+    notes: Prepare the pinned Windows x64 ripgrep component and verify its actual ZIP entries, manifest, licenses and bounded SHA-256 content without executing Setup.
+  - path: scripts/test/test-bundled-rg-package.ps1
+    class: test
+    owner: release
+    public_contract: false
+    deletable: false
+    notes: Cache-only component and ZIP acceptance/rejection tests; network downloads and Setup execution are forbidden.
+
   - path: scripts/ci/parallel-activity/verify_contract.py
     class: test
     owner: WB04

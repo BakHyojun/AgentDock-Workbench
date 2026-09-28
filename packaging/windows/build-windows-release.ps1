@@ -78,6 +78,11 @@ try {
         & python ./packaging/build-core-skill-bundle.py --output (Join-Path $payload 'share\agentdock\core-skills')
         Assert-NativeExit 'Core Skill bundle'
         Copy-Item -LiteralPath (Join-Path $repository 'LICENSE') -Destination (Join-Path $payload 'share\agentdock\LICENSE') -Force
+        if ($architecture -eq 'amd64') {
+            & (Join-Path $PSScriptRoot 'prepare-bundled-rg.ps1') `
+                -Destination (Join-Path $payload 'share\agentdock\bin') `
+                -CacheDirectory (Join-Path $outputRoot 'component-cache') | Out-Null
+        }
         if (Test-Path -LiteralPath (Join-Path $payload 'wsl-helper')) { Remove-Item -LiteralPath (Join-Path $payload 'wsl-helper') -Recurse -Force }
         Copy-Item -LiteralPath $helperRoot -Destination (Join-Path $payload 'wsl-helper') -Recurse
         if ($SignedBuild) {
@@ -86,6 +91,9 @@ try {
         $archive = Join-Path $releaseRoot "agentdock_windows_$architecture.zip"
         $paths = @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe','agentdock.ico','share','wsl-helper').ForEach({ Join-Path $payload $_ })
         Compress-Archive -LiteralPath $paths -DestinationPath $archive -Force
+        if ($architecture -eq 'amd64') {
+            & (Join-Path $PSScriptRoot 'prepare-bundled-rg.ps1') -ArchivePath $archive | Out-Null
+        }
         Write-Checksum $archive
         $parameters = @{
             Version=$version; Architecture=$architecture; AgentDockArchive=$archive

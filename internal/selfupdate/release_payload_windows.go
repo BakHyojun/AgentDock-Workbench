@@ -5,6 +5,7 @@ package selfupdate
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/uvwt/agentdock/internal/bundledrg"
 )
 
 const (
@@ -35,7 +38,9 @@ type validatedZipEntry struct {
 // extractWindowsReleasePayload validates the complete ZIP catalogue once and
 // streams only the runtime files required by a generation update. This avoids
 // reopening and rescanning the same archive for Core, Skills and desktop files.
-func extractWindowsReleasePayload(archiveData []byte, tempDir, executableName, targetVersion string) (windowsReleasePayload, error) {
+// The pinned ripgrep component travels with the desktop files and is verified
+// before a generation can copy it.
+func extractWindowsReleasePayload(ctx context.Context, archiveData []byte, tempDir, executableName, targetVersion string) (windowsReleasePayload, error) {
 	reader, err := zip.NewReader(bytes.NewReader(archiveData), int64(len(archiveData)))
 	if err != nil {
 		return windowsReleasePayload{}, err
@@ -62,6 +67,9 @@ func extractWindowsReleasePayload(archiveData []byte, tempDir, executableName, t
 	foundDesktop := make(map[string]bool, len(windowsDesktopArchiveFiles)+len(windowsGenerationArchiveFiles))
 	var skillBytes int64
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return windowsReleasePayload{}, err
+		}
 		if entry.isDir {
 			continue
 		}
@@ -103,6 +111,9 @@ func extractWindowsReleasePayload(archiveData []byte, tempDir, executableName, t
 			if !wanted {
 				mode, wanted = windowsGenerationArchiveFiles[entry.name]
 			}
+			if !wanted && bundledrg.ArchiveFile(entry.name) {
+				mode, wanted = 0o644, true
+			}
 			if !wanted {
 				continue
 			}
@@ -129,6 +140,9 @@ func extractWindowsReleasePayload(archiveData []byte, tempDir, executableName, t
 		if !foundDesktop[name] {
 			return windowsReleasePayload{}, fmt.Errorf("Windows Release ZIP 缺少 %s", name)
 		}
+	}
+	if _, err := bundledrg.VerifyIfPresent(ctx, payload.DesktopPath); err != nil {
+		return windowsReleasePayload{}, err
 	}
 	version := normalizeVersion(targetVersion)
 	if version == "" {

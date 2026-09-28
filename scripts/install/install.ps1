@@ -1056,8 +1056,43 @@ function Test-AgentDockReleasePayloadPath {
     ) -contains $Name) {
         return $true
     }
+    if ((Get-AgentDockBundledRgPayloadPaths) -ccontains $Name) {
+        return $true
+    }
     return $Name.StartsWith('share/agentdock/core-skills/', [StringComparison]::Ordinal) -or
         $Name.StartsWith('wsl-helper/', [StringComparison]::Ordinal)
+}
+
+# Exact pinned ripgrep component files carried by every x64 fork payload. When
+# present, the installer engine verifies the complete set, sizes and SHA-256
+# before copying it into a generation.
+function Get-AgentDockBundledRgPayloadPaths {
+    return @(
+        'share/agentdock/bin/manifest.json',
+        'share/agentdock/bin/rg.exe',
+        'share/agentdock/bin/COPYING',
+        'share/agentdock/bin/LICENSE-MIT',
+        'share/agentdock/bin/UNLICENSE'
+    )
+}
+
+# The engine accepts an absent component for legacy payloads, so Setup itself
+# refuses an x64 payload that lost it instead of installing without rg.
+function Assert-AgentDockBundledRgPayload {
+    param(
+        [Parameter(Mandatory = $true)][string] $ExtractDir,
+        [Parameter(Mandatory = $true)][string] $Architecture
+    )
+
+    if ($Architecture -ne 'amd64') {
+        return
+    }
+    foreach ($relative in Get-AgentDockBundledRgPayloadPaths) {
+        $path = Join-Path $ExtractDir ($relative.Replace('/', [IO.Path]::DirectorySeparatorChar))
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Release archive does not contain the bundled ripgrep component: $relative"
+        }
+    }
 }
 
 function Expand-AgentDockReleaseArchive {
@@ -1672,6 +1707,7 @@ try {
         -not (Test-Path -LiteralPath $coreSkillManifest -PathType Leaf)) {
         throw "Release archive does not contain a valid core Skill Bundle: $assetName"
     }
+    Assert-AgentDockBundledRgPayload -ExtractDir $extractDir -Architecture $architecture
     $sourceWSLHelperDir = Join-Path $extractDir 'wsl-helper'
     $sourceWSLHelperManifestPath = Join-Path $sourceWSLHelperDir 'manifest.json'
     $sourceWSLHelperAMD64 = Join-Path $sourceWSLHelperDir 'agentdock-wsl-helper-linux-amd64'

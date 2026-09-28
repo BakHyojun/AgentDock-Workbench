@@ -88,6 +88,9 @@ try {
 }
 
 $cloudflaredSignature = Get-AuthenticodeSignature -LiteralPath $cloudflaredPath
+if ($Architecture -eq 'amd64') {
+    & (Join-Path $PSScriptRoot 'prepare-bundled-rg.ps1') -ArchivePath $archivePath | Out-Null
+}
 if ($cloudflaredSignature.Status -ne [Management.Automation.SignatureStatus]::Valid) {
     throw "cloudflared Authenticode signature is not valid: $($cloudflaredSignature.StatusMessage)"
 }

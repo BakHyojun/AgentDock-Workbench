@@ -5,14 +5,18 @@ package selfupdate
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/uvwt/agentdock/internal/bundledrg"
 )
 
 func TestWindowsReleasePayloadExtractsCoreSkillsAndDesktopInOnePass(t *testing.T) {
-	payload, err := extractWindowsReleasePayload(makeWindowsReleaseZIP(t, nil), t.TempDir(), "agentdock.exe", "v1.2.3")
+	payload, err := extractWindowsReleasePayload(t.Context(), makeWindowsReleaseZIP(t, nil), t.TempDir(), "agentdock.exe", "v1.2.3")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +65,7 @@ func TestWindowsReleasePayloadRejectsUnsafeCatalogue(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
-			_, err := extractWindowsReleasePayload(makeWindowsReleaseZIP(t, test.add), filepath.Join(root, "stage"), "agentdock.exe", "v1.2.3")
+			_, err := extractWindowsReleasePayload(t.Context(), makeWindowsReleaseZIP(t, test.add), filepath.Join(root, "stage"), "agentdock.exe", "v1.2.3")
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error=%v, want substring %q", err, test.want)
 			}
@@ -69,6 +73,26 @@ func TestWindowsReleasePayloadRejectsUnsafeCatalogue(t *testing.T) {
 				t.Fatalf("unexpected traversal output: %v", statErr)
 			}
 		})
+	}
+}
+
+// A present but partial ripgrep component must fail closed instead of being
+// silently dropped from the generation payload.
+func TestWindowsReleasePayloadRejectsPartialBundledRG(t *testing.T) {
+	archive := makeWindowsReleaseZIP(t, func(writer *zip.Writer) {
+		writeReleaseEntry(t, writer, bundledrg.RelativeDir+"/manifest.json", string(bundledrg.ManifestBytes()))
+		writeReleaseEntry(t, writer, bundledrg.RelativeDir+"/rg.exe", "not the pinned executable")
+	})
+	if _, err := extractWindowsReleasePayload(t.Context(), archive, t.TempDir(), "agentdock.exe", "v1.2.3"); !errors.Is(err, bundledrg.ErrIntegrity) {
+		t.Fatalf("partial bundled rg was accepted or misreported: %v", err)
+	}
+}
+
+func TestWindowsReleasePayloadStopsWhenCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := extractWindowsReleasePayload(ctx, makeWindowsReleaseZIP(t, nil), t.TempDir(), "agentdock.exe", "v1.2.3"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled extraction ignored: %v", err)
 	}
 }
 
