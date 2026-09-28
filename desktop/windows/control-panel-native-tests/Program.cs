@@ -21,17 +21,22 @@ internal static partial class Program
     private static int Main(string[] args)
     {
         TaskSecurityDescriptorTests.Run(Check);
+        TaskBackupCompatibilityTests.Run(Check);
+        TaskOwnerRegression.Run();
+        TaskLegacyResumePolicy.Run(Check);
         if (args.Length == 1 && args[0] == "--security-contract-only")
         {
             Console.WriteLine($"Task security descriptor contract: {_assertions} assertions; no scheduler or file permissions changed.");
             return 0;
         }
-        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" || Environment.GetEnvironmentVariable("AGENTDOCK_NATIVE_ACCEPTANCE") != "1")
+        var localIsolated = args.Length > 0 && args[0] == "--local-isolated";
+        if (localIsolated) args = args[1..];
+        if (!localIsolated && (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" || Environment.GetEnvironmentVariable("AGENTDOCK_NATIVE_ACCEPTANCE") != "1"))
         {
             Console.Error.WriteLine("Native acceptance requires an explicitly enabled isolated GitHub runner.");
             return 2;
         }
-        var temp = Environment.GetEnvironmentVariable("RUNNER_TEMP") ?? throw new InvalidOperationException("Missing isolated temp root");
+        var temp = localIsolated ? Path.GetTempPath() : Environment.GetEnvironmentVariable("RUNNER_TEMP") ?? throw new InvalidOperationException("Missing isolated temp root");
         using var identity = WindowsIdentity.GetCurrent();
         Check(new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator), "Runner administrator token required");
         var root = Path.Combine(temp, "agentdock-native-" + Guid.NewGuid().ToString("N"));
@@ -55,12 +60,14 @@ internal static partial class Program
                 try { RunAbsentTask(service, folder, identity, root, elevated); }
                 catch (Exception error) { Failures.Add($"absent/elevated={elevated}: {error}"); Console.Error.WriteLine(Failures[^1]); }
             }
+            try { RunLegacyBoundRecovery(service, folder, identity, root, output); }
+            catch (Exception error) { Failures.Add($"legacy bound recovery: {error}"); Console.Error.WriteLine(Failures[^1]); }
             try { RunDaclRestoration(service, folder, identity, root); }
             catch (Exception error) { Failures.Add($"native DACL contract: {error}"); Console.Error.WriteLine(Failures[^1]); }
             var report = new
             {
-                assertions = _assertions, platform = RuntimeInformation.OSDescription,
-                architecture = RuntimeInformation.ProcessArchitecture.ToString(), isolation = "GitHub hosted runner",
+                assertions = _assertions, fixture_root = root, platform = RuntimeInformation.OSDescription,
+                architecture = RuntimeInformation.ProcessArchitecture.ToString(), isolation = localIsolated ? "explicit local disposable fixture" : "GitHub hosted runner",
                 scheduler = "native COM", recovery_files = "native NTFS", ui_started = false,
                 production_runtime_started = false, scenarios = Evidence, failures = Failures
             };
@@ -97,7 +104,7 @@ internal static partial class Program
     private static void Native(string kind, string name, string directory, string recovery, WindowsIdentity identity)
     {
         var result = TaskAdminService.Run(["--task-admin", kind, "--task-name", name, "--backup-directory", recovery,
-            "--runtime-root", directory, "--launcher-path", Path.Combine(directory, "fixture-never-started.exe"),
+            "--runtime-root", directory, "--launcher-path", Path.Combine(directory, "bin", "agentdock-tray.exe"),
             "--user-sid", identity.User!.Value, "--user-name", identity.Name]);
         if (result != 0) throw new IOException("Native TaskAdmin " + kind + " failed");
     }
@@ -116,7 +123,7 @@ internal static partial class Program
             Native("restore", name, directory, recovery, identity);
             TaskAdminService.VerifyRestoredBackup(name, recovery);
             Check(FindTask(folder, name) is null, "Restore must preserve original task absence");
-            Evidence.Add(new { scenario = "absent_task", elevated, restored = true });
+            Evidence.Add(new { scenario = "absent_task", task_name = name, runtime_root = directory, elevated, restored = true });
         }
         finally { RemoveFixtureTask(folder, name); }
     }
@@ -137,8 +144,8 @@ internal static partial class Program
         definition.Principal.RunLevel = elevated ? 0 : 1;
         definition.Settings.Enabled = false;
         dynamic action = definition.Actions.Create(0);
-        action.Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe");
-        action.Arguments = "/d /c exit 0";
+        action.Path = Path.Combine(directory, "bin", "agentdock-tray.exe");
+        action.Arguments = TaskAdminService.ElevatedCoreArguments(directory);
         dynamic original = folder.RegisterTaskDefinition(name, definition, 6, identity.User.Value, null, 3, null);
         original.Enabled = false;
         string oldXml = original.Xml;
@@ -237,9 +244,9 @@ internal static partial class Program
             {
                 dynamic restored = folder.GetTask(name);
                 Check(!(bool)restored.Enabled && Convert.ToInt32(restored.Definition.Principal.RunLevel) == (elevated ? 0 : 1) &&
-                    (string)restored.Definition.Actions.Item(1).Arguments == "/d /c exit 0", "Actual task policy and action restored");
+                    (string)restored.Definition.Actions.Item(1).Arguments == TaskAdminService.ElevatedCoreArguments(directory), "Actual task policy and action restored");
             }
-            Evidence.Add(new { scenario, elevated, restored = restoreCount, retained, expected_failure = failure is not null, original_task_bytes = oldXml.Length, process_exit_unknown = scenario == "native_unknown", security_comparison = securityResult?.ToString() });
+            Evidence.Add(new { scenario, task_name = name, runtime_root = directory, elevated, restored = restoreCount, retained, expected_failure = failure is not null, original_task_bytes = oldXml.Length, process_exit_unknown = scenario == "native_unknown", security_comparison = securityResult?.ToString() });
         }
         finally
         {

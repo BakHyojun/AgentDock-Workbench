@@ -14,8 +14,8 @@ internal static partial class Program
         definition.Principal.LogonType = 3;
         definition.Settings.Enabled = false;
         dynamic action = definition.Actions.Create(0);
-        action.Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe");
-        action.Arguments = "/d /c exit 0";
+        action.Path = Path.Combine(directory, "bin", "agentdock-tray.exe");
+        action.Arguments = TaskAdminService.ElevatedCoreArguments(directory);
         try
         {
             dynamic original = folder.RegisterTaskDefinition(name, definition, 6 | 0x10 | 0x20, identity.User.Value, null, 3,
@@ -33,7 +33,7 @@ internal static partial class Program
             try { TaskAdminService.VerifyRestoredBackup(name, recovery); }
             catch (IOException) { rejected = true; }
             Check(rejected && File.Exists(Path.Combine(recovery, "state.json")), "Additional native grant must fail verification and retain recovery evidence");
-            Evidence.Add(new { scenario = "native_dacl_tampering", exact_deny_restore = true, changed_grant_rejected = true });
+            Evidence.Add(new { scenario = "native_dacl_tampering", task_name = name, runtime_root = directory, exact_deny_restore = true, changed_grant_rejected = true });
         }
         finally { RemoveFixtureTask(folder, name); }
     }
