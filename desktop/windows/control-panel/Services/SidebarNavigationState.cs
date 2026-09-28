@@ -26,7 +26,7 @@ public sealed class ProjectNavigationState
     public void Collapse() { Mode = ProjectNavigationMode.Collapsed; HistoryLimit = 0; Cursor = ""; IntentRevision++; _changed?.Invoke(); }
     public void More()
     {
-        if (HistoryLimit > int.MaxValue - 20) throw new InvalidOperationException("历史对话数量超过分页范围。");
+        if (HistoryLimit > int.MaxValue - 20) throw new InvalidOperationException(UiText.Get("SidebarHistoryOverflow"));
         Mode = ProjectNavigationMode.History;
         HistoryLimit = HistoryLimit < 20 ? 20 : HistoryLimit + 20;
         IntentRevision++; _changed?.Invoke();

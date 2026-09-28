@@ -27,7 +27,7 @@ public sealed record ToolOutputSettings(
         while (!remaining.IsEmpty)
         {
             if (Rune.DecodeFromUtf16(remaining, out _, out var consumed) != OperationStatus.Done)
-                throw new System.IO.InvalidDataException("输出包含损坏的 Unicode 字符。");
+                throw new System.IO.InvalidDataException(UiText.Get("ExecutionInvalidUnicode"));
             remaining = remaining[consumed..]; count++;
         }
         return count;

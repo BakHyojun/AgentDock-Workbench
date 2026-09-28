@@ -30,11 +30,15 @@ internal sealed class DisplayPreferenceService(RuntimeService runtime)
         var enabled = value.Field("chatgpt_mcp_ui_enabled");
         var revision = value.OptionalNumber("revision");
         if (enabled.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || revision is not > 0)
-            throw new JsonException("服务未返回有效的显示偏好。");
+            throw new JsonException(UiText.Get("DisplayPreferenceInvalid"));
         var output = value.Field("tool_output");
         var outputEnabled = output.Field("enabled"); var maxChars = output.OptionalNumber("max_chars");
         if (outputEnabled.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || maxChars is not (>= ToolOutputSettings.Minimum and <= ToolOutputSettings.Maximum))
-            throw new JsonException("服务未返回有效的工具输出配置。");
-        return new(enabled.GetBoolean(), revision.Value, value.Text("warning"), value.Text("refresh_hint"), new(outputEnabled.GetBoolean(), (int)maxChars.Value));
+            throw new JsonException(UiText.Get("ExecutionOutputSettingsInvalid"));
+        var warning = value.Text("warning_code") == "display_preferences_load_failed"
+            ? UiText.Format("ThemeLoadWarning", value.Text("warning_detail")) : value.Text("warning");
+        var hint = value.Text("refresh_hint_code") == "refresh_chatgpt_connection"
+            ? UiText.Get("DisplayRefreshConnectionHint") : value.Text("refresh_hint");
+        return new(enabled.GetBoolean(), revision.Value, warning, hint, new(outputEnabled.GetBoolean(), (int)maxChars.Value));
     }
 }

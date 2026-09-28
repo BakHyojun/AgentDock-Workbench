@@ -34,26 +34,26 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
     {
         get
         {
-            if (State == "unknown") return "该记录未保存输出正文";
+            if (State == "unknown") return UiText.Get("ExecutionPayloadMissingBody");
             if (Reference.Length == 0) return Reason.Length > 0 ? StateLabel + "：" + Reason : StateLabel;
-            if (!_knownBytes) return $"当前显示 {_displayedChars:N0} 字符，总长度暂未知";
-            if (TotalBytes == 0) return State == "streaming" ? "当前已保存 0 字节，输出继续写入" : "无输出，0 字节";
-            if (!_loaded) return State == "partial" ? $"当前为预览，已保存部分输出共 {TotalBytes:N0} 字节" : $"当前为预览，已保存内容共 {TotalBytes:N0} 字节";
-            if (State == "complete" && Offset == 0 && NextOffset == TotalBytes && !HasMore) return $"已显示全部内容，共 {TotalBytes:N0} 字节";
-            var range = NextOffset > Offset ? $"显示第 {Offset + 1:N0}–{NextOffset:N0} 字节" : "当前页无内容";
+            if (!_knownBytes) return UiText.Format("ExecutionPayloadUnknownLength", _displayedChars);
+            if (TotalBytes == 0) return State == "streaming" ? UiText.Get("ExecutionPayloadZeroStreaming") : UiText.Get("ExecutionPayloadZero");
+            if (!_loaded) return State == "partial" ? UiText.Format("ExecutionPayloadPreviewPartial", TotalBytes) : UiText.Format("ExecutionPayloadPreviewSaved", TotalBytes);
+            if (State == "complete" && Offset == 0 && NextOffset == TotalBytes && !HasMore) return UiText.Format("ExecutionPayloadAllSaved", TotalBytes);
+            var range = NextOffset > Offset ? UiText.Format("ExecutionPayloadByteRange", Offset + 1, NextOffset) : UiText.Get("ExecutionPayloadEmptyPage");
             return State switch
             {
-                "streaming" => $"{range}，当前已保存 {TotalBytes:N0} 字节，输出继续写入",
-                "partial" => $"{range}，已保存部分输出共 {TotalBytes:N0} 字节" + (_storageReason.Length > 0 ? "；" + _storageReason : ""),
-                _ => $"{range}，共 {TotalBytes:N0} 字节"
+                "streaming" => UiText.Format("ExecutionPayloadRangeStreaming", range, TotalBytes),
+                "partial" => UiText.Format("ExecutionPayloadRangePartial", range, TotalBytes) + (_storageReason.Length > 0 ? "；" + _storageReason : ""),
+                _ => UiText.Format("ExecutionPayloadRangeTotal", range, TotalBytes)
             };
         }
     }
     public string StateLabel => State switch
     {
-        "pending" => kind == "调用" ? "正在保存调用参数" : "等待输出",
-        "streaming" => "流式输出", "complete" => "已保存", "partial" => "部分输出",
-        "not_stored" => "未保存", "internal" => "内部调用", _ => "旧记录"
+        "pending" => kind == "request" ? UiText.Get("ExecutionRequestSaving") : UiText.Get("ExecutionOutputWaiting"),
+        "streaming" => UiText.Get("ExecutionOutputStreaming"), "complete" => UiText.Get("ExecutionPayloadSaved"), "partial" => UiText.Get("ExecutionOutputPartial"),
+        "not_stored" => UiText.Get("NotSaved"), "internal" => UiText.Get("ExecutionInternalCall"), _ => UiText.Get("ExecutionLegacyRecord")
     };
 
     public void Describe(JsonElement descriptor, string parentCallId = "")
@@ -72,9 +72,9 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
             Text = descriptor.Text("preview");
             _displayedChars = ToolOutputSettings.ScalarCount(Text);
             if (Text.Length == 0 && Reference.Length == 0)
-                Text = Reason.Length > 0 ? Reason : !present || State == "unknown" ? $"旧记录未保存{kind}。" : StateLabel + "。";
+                Text = Reason.Length > 0 ? Reason : !present || State == "unknown" ? UiText.Format("ExecutionPayloadLegacyMissing", UiText.Get(kind == "request" ? "ExecutionRequest" : "ExecutionOutput")) : StateLabel;
         }
-        if (!present && parentCallId.Length > 0) { State = "internal"; Text = "此内部调用关联根调用 " + parentCallId + "。已保存的业务请求与输出请在根调用中查看。"; }
+        if (!present && parentCallId.Length > 0) { State = "internal"; Text = UiText.Format("ExecutionPayloadInternalNotice", parentCallId); }
         Notify();
     }
 
@@ -94,13 +94,13 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
         var text = page.Text("text");
         var scalars = ToolOutputSettings.ScalarCount(text);
         if (offset < 0 || next < offset || _knownBytes && next > TotalBytes || next - offset > budget.MaxBytes || Encoding.UTF8.GetByteCount(text) != next - offset)
-            throw new InvalidDataException("工具输出分页边界无效。");
+            throw new InvalidDataException(UiText.Get("ExecutionPayloadInvalidBoundary"));
         if (budget.LimitChars > 0 && (scalars > budget.LimitChars || page.Text("unit") != "unicode_scalar" || page.Number("limit_chars") != budget.LimitChars || page.Number("returned_chars") != scalars))
-            throw new InvalidDataException("工具输出字符预算或计数不一致。");
-        if (page.Flag("has_more") && next <= offset) throw new InvalidDataException("工具输出分页没有推进。");
+            throw new InvalidDataException(UiText.Get("ExecutionPayloadCharacterMismatch"));
+        if (page.Flag("has_more") && next <= offset) throw new InvalidDataException(UiText.Get("ExecutionPayloadNoProgress"));
         if (NeedsBudgetReload(budget))
         {
-            if (offset != 0) throw new InvalidDataException("修改字符上限后必须从已知起点重新分页。");
+            if (offset != 0) throw new InvalidDataException(UiText.Get("ExecutionPayloadBudgetRestart"));
             _previous.Clear(); _loaded = false;
         }
         if (_loaded && offset != Offset)

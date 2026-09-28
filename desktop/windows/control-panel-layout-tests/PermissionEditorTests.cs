@@ -22,8 +22,8 @@ internal static class PermissionEditorTests
         var toggle = Find<CheckBox>(editor, "PermissionSettingsEdit");
         var fields = Find<StackPanel>(editor, "CustomPermissionFields");
         var modeNote = Find<TextBlock>(editor, "CustomPermissionModeNote");
-        check(toggle.Content?.ToString() == "启用自定义权限设置", "Custom permission toggle wording is ambiguous.");
-        check(modeNote.Text.Contains("未启用自定义权限时，权限由当前执行模式统一控制"), "Execution-mode ownership note is missing.");
+        check(toggle.Content?.ToString() == UiText.Get("PermissionCustomEnable"), "Custom permission toggle wording is ambiguous.");
+        check(modeNote.Text == UiText.Get("PermissionCustomModeNote"), "Execution-mode ownership note is missing.");
         check(toggle.IsChecked == false && fields.Visibility == Visibility.Collapsed, "Legacy policy must default to mode-controlled collapsed settings.");
         var change = new Dictionary<string, object>(); editor.AddChange(change);
         var legacySave = JsonSerializer.SerializeToElement(change);

@@ -23,7 +23,7 @@ internal static class InsertionTimelineTests
         var rows = InsertionTimeline.Merge([a,b], [Message("delivery_unknown"),Message("delivery_unknown")], "conv_1", "", "", "", "active", start.AddSeconds(5));
         check(rows.Select(row=>row.Id).SequenceEqual(new[]{"call_a","ins_1","call_b"}), "supplement is interleaved once by send time");
         var message = rows[1];
-        check(message.IsInsertion && message.Title == "用户补充" && message.Duration == "" && message.Tool == "", "message is not a fabricated tool execution");
+        check(message.IsInsertion && message.Title == UiText.Get("ExecutionUserSupplement") && message.Duration == "" && message.Tool == "", "message is not a fabricated tool execution");
         check(!message.CanStop && !message.CanRetry && !message.NeedsApproval && !message.HasEditStatistics, "message never offers tool stop/replay/approval/statistics");
         check(message.CanRedeliverInsertion && message.CanCancelInsertion, "unconfirmed message allows bounded supplement-only controls");
         check(!message.Technical.Contains("must-not-appear") && !message.Technical.Contains("private-owner") && !message.Technical.Contains("forged-approval"), "timeline whitelist excludes receipt and executable control fields");
@@ -55,8 +55,8 @@ internal static class InsertionTimelineTests
         foreach (var (conversation,task,view,status,search) in new[]{("other","","active","",""),("conv_1","other","active","",""),("conv_1","","trash","",""),("conv_1","","active","running",""),("conv_1","","active","","absent")})
             check(InsertionTimeline.Merge([a,b],[Message("delivery_unknown")],conversation,task,search,status,view,start).All(row=>!row.IsInsertion), "scope/filter excludes unrelated supplements");
         check(InsertionTimeline.Merge([a,b],[Message("delivery_unknown")],"conv_1","task_1","帅哥","unknown","active",start).Count(row=>row.IsInsertion)==1, "message text and unconfirmed filters are supported");
-        check(ExecutionTitleFormatter.Format("plugin_load","Load a heavy plugin","")=="plugin_load · 展开插件", "historical default Heavy label becomes neutral expansion");
+        check(ExecutionTitleFormatter.Format("plugin_load","Load a heavy plugin","")=="plugin_load · Load a heavy plugin", "an existing English plugin description remains original data");
         check(ExecutionTitleFormatter.Format("plugin_load","展开 GitHub 技能","")=="plugin_load · 展开 GitHub 技能", "concrete plugin label remains intact");
-        check(ExecutionTitleFormatter.Format("insertion_ack","Acknowledge received supplements","")=="insertion_ack · 确认收到补充", "receipt action has deterministic Chinese title");
+        check(ExecutionTitleFormatter.Format("insertion_ack","Acknowledge received supplements","")=="insertion_ack · Acknowledge received supplements", "the supplied receipt description is preserved");
     }
 }

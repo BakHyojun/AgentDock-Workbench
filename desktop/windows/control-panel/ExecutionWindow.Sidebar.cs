@@ -44,7 +44,7 @@ public partial class ExecutionWindow
         var fingerprint = string.Join(";", ordered.Select(item => $"{item.Code}|{item.Scope}|{item.RowType}"));
         var generation = ordered.Max(item => item.ResponseGeneration);
         var message = string.Join("\n", ordered.Take(3).Select(item => item.UserMessage));
-        if (ordered.Length > 3) message += $"\n另有 {ordered.Length - 3} 个项目响应被隔离。";
+        if (ordered.Length > 3) message += "\n" + UiText.Format("SidebarMoreIsolated", ordered.Length - 3);
         SidebarFailureState state;
         if (_sidebarFailures.TryGetValue(requestScope, out var previous) && previous.Fingerprint == fingerprint)
             state = new SidebarFailureState(fingerprint, message, generation)
@@ -428,9 +428,9 @@ public partial class ExecutionWindow
     {
         if (sender is not FrameworkElement { DataContext: CollectionViewGroup { Name: WorkspaceGroupKey key } } anchor) return;
         e.Handled = true; var root = key.Root; var menu = Menu(anchor);
-        ActionMenu(menu, "打开项目目录", () =>
+        ActionMenu(menu, UiText.Get("ExecutionOpenProjectFolder"), () =>
         {
-            if (!Path.IsPathFullyQualified(root) || !Directory.Exists(root)) throw new IOException("项目目录不存在或已移动。");
+            if (!Path.IsPathFullyQualified(root) || !Directory.Exists(root)) throw new IOException(UiText.Get("ExecutionProjectFolderMissing"));
             Process.Start(new ProcessStartInfo { FileName = root, UseShellExecute = true }); return Task.CompletedTask;
         }, !string.IsNullOrWhiteSpace(root));
         OpenMenu(menu);

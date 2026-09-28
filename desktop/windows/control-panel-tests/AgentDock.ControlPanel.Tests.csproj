@@ -7,4 +7,11 @@
   <ItemGroup><Compile Include="../control-panel/Services/PrivilegeTransition.cs" Link="PrivilegeTransition.cs"/><Compile Include="../control-panel/Services/LoopbackHttp.cs" Link="LoopbackHttp.cs"/></ItemGroup>
   <ItemGroup><Compile Include="../control-panel/Models/ToolOutputSettings.cs" Link="ToolOutputSettings.cs"/></ItemGroup>
   <ItemGroup><Compile Include="../control-panel/Models/InsertionPresentation.cs" Link="InsertionPresentation.cs"/><Compile Include="../control-panel/Models/InsertionTimeline.cs" Link="InsertionTimeline.cs"/></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../control-panel/Localization/UiText.cs" Link="UiText.cs"/>
+    <Compile Include="../control-panel/Localization/OwnedText.cs" Link="OwnedText.cs"/>
+    <EmbeddedResource Include="../control-panel/Resources/UiStrings.resx"><LogicalName>AgentDock.ControlPanel.Resources.UiStrings.resources</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="../control-panel/Resources/UiStrings.zh-CN.resx"><LogicalName>AgentDock.ControlPanel.Resources.UiStrings.zh-CN.resources</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="../control-panel/Resources/UiStrings.ko-KR.resx"><LogicalName>AgentDock.ControlPanel.Resources.UiStrings.ko-KR.resources</LogicalName></EmbeddedResource>
+  </ItemGroup>
 </Project>

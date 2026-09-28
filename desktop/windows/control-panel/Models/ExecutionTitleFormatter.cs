@@ -12,46 +12,39 @@ public static class ExecutionTitleFormatter
             label = label[tool.Length..].TrimStart(' ', '·', ':', '-', '：');
         if (tool == "file_edit" && label.StartsWith("EDIT_FILE", StringComparison.Ordinal))
             label = label[9..].TrimStart(' ', '·', ':', '-', '：');
-        if (!ContainsChinese(label)) label = DefaultAction(tool, action);
+        if (label.Length == 0) label = DefaultAction(tool, action);
         return tool.Length == 0 ? label : tool + " · " + label;
-    }
-
-    private static bool ContainsChinese(string text)
-    {
-        foreach (var rune in text.EnumerateRunes())
-            if (rune.Value is >= 0x3400 and <= 0x9fff or >= 0x20000 and <= 0x323af) return true;
-        return false;
     }
 
     private static string DefaultAction(string tool, string action) => (tool, action) switch
     {
-        ("task_manage", "create") => "创建任务",
-        ("task_manage", "resume") => "恢复任务",
-        ("task_manage", "checkpoint") => "更新任务进度",
-        ("task_manage", "complete") => "完成任务记录",
-        ("task_manage", "list" or "get") => "查看任务",
-        ("task_manage", "cancel") => "取消任务",
-        ("task_manage", _) => "管理任务",
-        ("file_edit", "add") => "创建文件",
-        ("file_edit", "delete") => "删除文件",
-        ("file_edit", "move") => "移动文件",
-        ("file_edit", _) => "编辑文件",
-        ("read_file", _) => "读取文件",
-        ("list_dir", _) => "列出目录",
-        ("search_text", _) => "搜索文本",
-        ("agentdock_context", _) => "加载上下文",
-        ("exec_command", _) => "执行命令",
-        ("session_observe", _) => "查看命令会话",
-        ("session_act", _) => "操作命令会话",
-        ("workspace_manage", _) => "管理工作区",
-        ("device_manage", _) => "管理设备",
-        ("file_publish", _) => "发布文件",
-        ("mcp_search", _) => "搜索扩展工具",
-        ("mcp_inspect", _) => "查看扩展工具说明",
-        ("mcp_tool_call", _) => "调用扩展工具",
-        ("plugin_load", _) => "展开插件",
-        ("insertion_ack", _) => "确认收到补充",
-        ("plugin_manage", _) => "管理插件",
-        _ => tool.Contains(':') || tool.Contains('.') ? "调用扩展工具" : "执行工具"
+        ("task_manage", "create") => UiText.Get("ExecutionActionCreateTask"),
+        ("task_manage", "resume") => UiText.Get("ExecutionActionResumeTask"),
+        ("task_manage", "checkpoint") => UiText.Get("ExecutionActionCheckpoint"),
+        ("task_manage", "complete") => UiText.Get("ExecutionActionCompleteTask"),
+        ("task_manage", "list" or "get") => UiText.Get("ExecutionActionReadTask"),
+        ("task_manage", "cancel") => UiText.Get("ActivityCancelTask"),
+        ("task_manage", _) => UiText.Get("ExecutionManageTask"),
+        ("file_edit", "add") => UiText.Get("ExecutionActionCreateFile"),
+        ("file_edit", "delete") => UiText.Get("ExecutionActionDeleteFile"),
+        ("file_edit", "move") => UiText.Get("ExecutionActionMoveFile"),
+        ("file_edit", _) => UiText.Get("ExecutionTool_file_edit"),
+        ("read_file", _) => UiText.Get("ExecutionTool_read_file"),
+        ("list_dir", _) => UiText.Get("ExecutionTool_list_dir"),
+        ("search_text", _) => UiText.Get("ExecutionTool_search_text"),
+        ("agentdock_context", _) => UiText.Get("ExecutionActionContext"),
+        ("exec_command", _) => UiText.Get("ExecutionActionCommand"),
+        ("session_observe", _) => UiText.Get("ExecutionTool_session_observe"),
+        ("session_act", _) => UiText.Get("ExecutionActionSession"),
+        ("workspace_manage", _) => UiText.Get("ExecutionActionWorkspace"),
+        ("device_manage", _) => UiText.Get("ExecutionActionDevice"),
+        ("file_publish", _) => UiText.Get("ExecutionActionPublish"),
+        ("mcp_search", _) => UiText.Get("ExecutionActionFindTool"),
+        ("mcp_inspect", _) => UiText.Get("ExecutionActionInspectTool"),
+        ("mcp_tool_call", _) => UiText.Get("ExecutionActionExternal"),
+        ("plugin_load", _) => UiText.Get("ExecutionActionPlugin"),
+        ("insertion_ack", _) => UiText.Get("ExecutionActionReceipt"),
+        ("plugin_manage", _) => UiText.Get("ExecutionTool_plugin_manage"),
+        _ => tool.Contains(':') || tool.Contains('.') ? UiText.Get("ExecutionActionExternal") : UiText.Get("ExecutionActionTool")
     };
 }

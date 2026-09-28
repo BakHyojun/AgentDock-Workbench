@@ -14,8 +14,8 @@ internal sealed class SidebarProtocolException : JsonException
     internal string Fingerprint => $"{Code}|{Scope}|{RowType}";
     internal bool IsPageWide => Scope == "page";
     internal string UserMessage => IsPageWide
-        ? $"对话列表响应无效，已保留上次可信列表（{Code}，响应代次 {ResponseGeneration}）。"
-        : $"项目对话响应无效，已保留该项目上次可信内容（{Code}，响应代次 {ResponseGeneration}）。";
+        ? UiText.Format("SidebarPageResponseInvalid", Code, ResponseGeneration)
+        : UiText.Format("SidebarWorkspaceResponseInvalid", Code, ResponseGeneration);
 
     internal SidebarProtocolException(string code, string scope, string rowType, long responseGeneration)
         : base(code)

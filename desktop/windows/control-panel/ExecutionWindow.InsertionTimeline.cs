@@ -41,7 +41,7 @@ public partial class ExecutionWindow
             }
         }
         finally { _updating = previous; }
-        if (_bottomPane == InfoDetailsText && DetailsTitle.Text == "用户补充" && Calls.FirstOrDefault(row => row.IsInsertion && row.Id == _shownInsertion) is { } shown) InfoDetailsText.Text = shown.InsertionDetails;
+        if (_bottomPane == InfoDetailsText && DetailsTitle.Text == UiText.Get("ExecutionUserSupplement") && Calls.FirstOrDefault(row => row.IsInsertion && row.Id == _shownInsertion) is { } shown) InfoDetailsText.Text = shown.InsertionDetails;
         UpdateEmpty();
     }
 
@@ -58,16 +58,16 @@ public partial class ExecutionWindow
     private void ShowInsertionDetails(ExecutionCallRow row)
     {
         _detailCall = null; _shownInsertion = row.Id;
-        ShowInfo("用户补充", row.InsertionDetails);
+        ShowInfo(UiText.Get("ExecutionUserSupplement"), row.InsertionDetails);
     }
 
     private void ShowInsertionMenu(FrameworkElement anchor, ExecutionCallRow row)
     {
         var menu = Menu(anchor);
-        ActionMenu(menu,"查看补充",() => { ShowInsertionDetails(row); return Task.CompletedTask; });
-        ActionMenu(menu,"复制补充",() => { CopyText(row.InsertionText); return Task.CompletedTask; });
-        ActionMenu(menu,"安全重投补充",() => ChangeInsertionAsync(row,"retry"),row.CanRedeliverInsertion);
-        ActionMenu(menu,"停止后续投递",() => ChangeInsertionAsync(row,"cancel"),row.CanCancelInsertion);
+        ActionMenu(menu,UiText.Get("InsertionView"),() => { ShowInsertionDetails(row); return Task.CompletedTask; });
+        ActionMenu(menu,UiText.Get("InsertionCopy"),() => { CopyText(row.InsertionText); return Task.CompletedTask; });
+        ActionMenu(menu,UiText.Get("InsertionSafeRetry"),() => ChangeInsertionAsync(row,"retry"),row.CanRedeliverInsertion);
+        ActionMenu(menu,UiText.Get("InsertionStop"),() => ChangeInsertionAsync(row,"cancel"),row.CanCancelInsertion);
         OpenMenu(menu);
     }
 

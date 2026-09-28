@@ -182,7 +182,7 @@ internal static class SidebarInteractionTests
             check(!(bool)retryAllowed.Invoke(window, null)! && !Field<bool>(window, "_sidebarDirty"),
                 "An unchanged sidebar failure retained an unbounded automatic retry path.");
             var warning = (FrameworkElement)window.FindName("WarningPanel");
-            var closeWarning = Children(warning).OfType<Button>().Single(button => Equals(button.Content, "关闭"));
+            var closeWarning = Children(warning).OfType<Button>().Single(button => Equals(button.Content, UiText.Get("ExecutionClose")));
             closeWarning.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, closeWarning));
             check(warning.Visibility == Visibility.Collapsed && !(bool)retryAllowed.Invoke(window, null)!,
                 "Closing the warning incorrectly marked the underlying sidebar failure as repaired.");

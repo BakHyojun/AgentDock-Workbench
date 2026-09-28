@@ -10,8 +10,8 @@ namespace AgentDock.ControlPanel;
 internal sealed class PermissionSettingsEditor
 {
     private readonly JsonElement _policy;
-    private readonly CheckBox _custom = new() { Content = "启用自定义权限设置", Margin = new Thickness(0, 14, 0, 6) };
-    private readonly CheckBox _inherit = new() { Content = "继承全局自定义权限设置", Margin = new Thickness(0, 6, 0, 6) };
+    private readonly CheckBox _custom = new() { Content = UiText.Get("PermissionCustomEnable"), Margin = new Thickness(0, 14, 0, 6) };
+    private readonly CheckBox _inherit = new() { Content = UiText.Get("PermissionCustomInherit"), Margin = new Thickness(0, 6, 0, 6) };
     private readonly StackPanel _fields = new();
     private readonly StackPanel _categories = new();
     private readonly ComboBox _filesystem;
@@ -26,26 +26,26 @@ internal sealed class PermissionSettingsEditor
     internal PermissionSettingsEditor(JsonElement policy)
     {
         _policy = policy;
-        var modeNote = Note("未启用自定义权限时，权限由当前执行模式统一控制；已保存的三层设置会保留，但不参与权限判定。");
+        var modeNote = Note(UiText.Get("PermissionCustomModeNote"));
         AutomationProperties.SetAutomationId(_custom, "PermissionSettingsEdit");
         AutomationProperties.SetAutomationId(modeNote, "CustomPermissionModeNote");
         AutomationProperties.SetAutomationId(_inherit, "PermissionSettingsInherit");
         AutomationProperties.SetAutomationId(_fields, "CustomPermissionFields");
         View.Children.Add(_custom); View.Children.Add(modeNote); View.Children.Add(_inherit); View.Children.Add(_fields);
-        _filesystem = Choice("Filesystem · 文件系统", "PermissionFilesystem", [new("deny", "deny · 禁止文件读写"), new("read", "read · 只允许读取"), new("write", "write · 允许读写")]);
-        _network = Choice("Network · 网络", "PermissionNetwork", [new("allow", "allow · 允许联网工具"), new("deny", "deny · 拒绝联网及无法约束的工具")]);
-        _boundary = Choice("Sandbox boundary · 准入边界", "PermissionSandboxBoundary", [new("none", "none · 无额外工作区边界"), new("workspace", "workspace · 仅固定工作区目标")]);
-        _fields.Children.Add(Note("这是工具准入边界，不是操作系统沙箱。受限配置下，不透明命令、第三方 MCP 和 WSL 会被拒绝，不尝试提升权限执行。"));
-        _approval = Choice("Approval Policy · 审批策略", "ApprovalPolicy", [new("on-request", "on-request · 需要确认时申请审批"), new("never", "never · 不受理审批，需要确认的操作直接拒绝"), new("granular", "granular · 按类别决定是否受理审批")]);
+        _filesystem = Choice(UiText.Get("PermissionFilesystemLabel"), "PermissionFilesystem", [new("deny", UiText.Get("PermissionFilesystemDeny")), new("read", UiText.Get("PermissionFilesystemRead")), new("write", UiText.Get("PermissionFilesystemWrite"))]);
+        _network = Choice(UiText.Get("PermissionNetworkLabel"), "PermissionNetwork", [new("allow", UiText.Get("PermissionNetworkAllow")), new("deny", UiText.Get("PermissionNetworkDeny"))]);
+        _boundary = Choice(UiText.Get("PermissionBoundaryLabel"), "PermissionSandboxBoundary", [new("none", UiText.Get("PermissionBoundaryNone")), new("workspace", UiText.Get("PermissionBoundaryWorkspace"))]);
+        _fields.Children.Add(Note(UiText.Get("PermissionBoundaryNotice")));
+        _approval = Choice(UiText.Get("PermissionApprovalLabel"), "ApprovalPolicy", [new("on-request", UiText.Get("PermissionApprovalRequest")), new("never", UiText.Get("PermissionApprovalNever")), new("granular", UiText.Get("PermissionApprovalGranular"))]);
         _fields.Children.Add(_categories);
-        foreach (var (key, label) in new[] { ("file_writes", "文件写入"), ("commands", "命令与进程控制"), ("network", "网络"), ("mcp", "第三方 MCP"), ("management", "管理操作"), ("other", "其他操作") })
+        foreach (var (key, label) in new[] { ("file_writes", UiText.Get("PermissionCategoryFiles")), ("commands", UiText.Get("PermissionCategoryCommands")), ("network", UiText.Get("PermissionCategoryNetwork")), ("mcp", UiText.Get("PermissionCategoryMcp")), ("management", UiText.Get("PermissionCategoryManagement")), ("other", UiText.Get("PermissionCategoryOther")) })
         {
-            var box = new CheckBox { Content = "允许发起审批：" + label, Margin = new Thickness(8, 3, 0, 3) };
+            var box = new CheckBox { Content = UiText.Get("PermissionApprovalPrefix") + label, Margin = new Thickness(8, 3, 0, 3) };
             AutomationProperties.SetAutomationId(box, "ApprovalCategory_" + key);
             _gates.Add(key, box); _categories.Children.Add(box);
         }
-        _reviewer = Choice("Approval Reviewer · 审批主体", "ApprovalReviewer", [new("user", "user · 用户审批"), new("auto_review", "auto_review · 独立审查器")]);
-        _fields.Children.Add(Note("auto_review 需要管理员配置 auto-review.json 与可信独立审查程序；未配置、超时、无效返回或拒绝均不执行。它不能越过 Profile 或创建永久授权。"));
+        _reviewer = Choice(UiText.Get("PermissionReviewerLabel"), "ApprovalReviewer", [new("user", UiText.Get("PermissionReviewerUser")), new("auto_review", UiText.Get("PermissionReviewerAuto"))]);
+        _fields.Children.Add(Note(UiText.Get("PermissionReviewerNotice")));
         _custom.Checked += (_, _) => UpdateEnabled(); _custom.Unchecked += (_, _) => UpdateEnabled();
         _inherit.Checked += (_, _) => UpdateEnabled(); _inherit.Unchecked += (_, _) => UpdateEnabled();
         _approval.SelectionChanged += (_, _) => UpdateEnabled();
