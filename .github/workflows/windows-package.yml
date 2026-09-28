@@ -231,7 +231,7 @@ jobs:
           if ($publish -and ($env:EVENT_NAME -ne 'workflow_dispatch' -or $env:INSTALLATION_TESTS -ne 'true' -or $prerelease -or $env:BUILD_ARCHITECTURES -ne 'amd64')) {
             throw 'Formal fork publication requires explicit x64 isolated installation acceptance and prerelease=false.'
           }
-          if ($publish -and ([version]$version -le [version]'1.1.8' -or @('1.1.6100','1.1.16101','1.1.16102','1.1.8100') -contains $version)) { throw 'The distribution version must follow the upstream baseline and never reuse a published fork version.' }
+          if ($publish -and ([version]$version -le [version]'1.1.8' -or @('1.1.6100','1.1.8100') -contains $version)) { throw 'The distribution version must follow the upstream baseline and never reuse a published fork version.' }
           if (-not [string]::IsNullOrWhiteSpace($tag)) {
             & go run ./tools/release verify-version $tag
             if ($LASTEXITCODE -ne 0) {
@@ -338,12 +338,13 @@ jobs:
             -LegacyTrayPath .\dist\windows-package\payload-amd64\agentdock-tray.exe `
             -AllowLegacyTaskMutation -EvidenceDirectory (Join-Path $PWD 'dist/windows-package/setup-evidence')
 
-      - name: Verify historical 1.1.16102 upgrade repair and rollback
+      - name: Verify upgrade from the published 1.1.8100 with repair and rollback
         id: upgrade
         if: github.event_name == 'workflow_dispatch' && inputs.installation_tests == true
         run: |
           $ErrorActionPreference = 'Stop'
-          $baselineCommit = '4d719ce75ac748cb24e8ad4b7d92ff7c56e24225'
+          # Source of the published v1.1.8100 Setup, kept reachable by tag v1.1.8100.
+          $baselineCommit = 'dc6c861954b4e7d0ecdd146599149f7ce522f42d'
           $baselineRoot = Join-Path $env:RUNNER_TEMP 'workbench-historical-source'
           $baselineOutput = Join-Path $env:RUNNER_TEMP 'workbench-historical-payload'
           git worktree add --detach $baselineRoot $baselineCommit
@@ -351,7 +352,7 @@ jobs:
           try {
             & (Join-Path $baselineRoot 'packaging/windows/build-windows-release.ps1') -Architectures amd64 -OutputDirectory $baselineOutput -CloudflaredBinary (Join-Path $PWD 'dist/windows-package/cloudflared.exe')
             $baselineReport = Get-Content (Join-Path $baselineOutput 'build-report.json') -Raw | ConvertFrom-Json
-            if ($baselineReport.version -ne '1.1.16102' -or $baselineReport.commit -ne $baselineCommit -or $baselineReport.source_dirty) { throw 'Historical baseline provenance mismatch.' }
+            if ($baselineReport.version -ne '1.1.8100' -or $baselineReport.commit -ne $baselineCommit -or $baselineReport.source_dirty) { throw 'Historical baseline provenance mismatch.' }
             & ./scripts/test/test-windows-upgrade-isolated.ps1 -Archive (Join-Path $PWD 'dist/windows-package/release/agentdock_windows_amd64.zip') `
               -BaselineArchive (Join-Path $baselineOutput 'release/agentdock_windows_amd64.zip') `
               -CloudflaredBinary (Join-Path $PWD 'dist/windows-package/cloudflared.exe') `
@@ -360,7 +361,7 @@ jobs:
               -ExpectedVersion '${{ steps.metadata.outputs.version }}' -ExerciseRollback `
               -ReportPath (Join-Path $PWD 'dist/windows-package/upgrade-validation.json')
             $receipt = Get-Content dist/windows-package/upgrade-validation.json -Raw | ConvertFrom-Json
-            if (-not $receipt.passed -or $receipt.baseline -ne '1.1.16102' -or $receipt.target -ne '${{ steps.metadata.outputs.version }}') { throw 'Historical upgrade did not produce matching acceptance.' }
+            if (-not $receipt.passed -or $receipt.baseline -ne '1.1.8100' -or $receipt.target -ne '${{ steps.metadata.outputs.version }}') { throw 'Historical upgrade did not produce matching acceptance.' }
           } finally {
             git worktree remove $baselineRoot
             if ($LASTEXITCODE -ne 0) { throw 'Historical source cleanup failed; fixture was retained for inspection.' }
@@ -373,9 +374,9 @@ jobs:
             schema_version = 1
             repository = 'eerraa/AgentDock-Workbench'
             native_architecture = 'amd64'
-            baseline_version = $(if ('${{ steps.upgrade.outcome }}' -eq 'success') { '1.1.16102' } else { '' })
-            baseline_source = '4d719ce75ac748cb24e8ad4b7d92ff7c56e24225'
-            baseline_origin = 'rebuilt_unchanged_historical_release_source'
+            baseline_version = $(if ('${{ steps.upgrade.outcome }}' -eq 'success') { '1.1.8100' } else { '' })
+            baseline_source = 'dc6c861954b4e7d0ecdd146599149f7ce522f42d'
+            baseline_origin = 'rebuilt_unchanged_published_release_source'
             production_touched = $false
             native_recovery = '${{ needs.native-acceptance.result }}'
             offscreen_layout = 'passed'

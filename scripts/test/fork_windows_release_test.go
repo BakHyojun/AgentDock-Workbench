@@ -100,6 +100,43 @@ func TestWindowsSetupProvisionsBundledPluginsAfterCommit(t *testing.T) {
 	}
 }
 
+// CI upgrades from the release the verifier requires: one version and source
+// commit throughout the workflow, and that version is a published fork release.
+func TestWindowsUpgradeBaselineIsThePublishedRelease(t *testing.T) {
+	read := func(path string) string {
+		t.Helper()
+		data, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(path)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.ReplaceAll(string(data), "\r\n", "\n")
+	}
+	workflow := read(".github/workflows/windows-package.yml")
+	verifier := read("scripts/test/verify-windows-release-assets.ps1")
+	required := regexp.MustCompile(`\$Scope\.baseline_version -cne '([0-9.]+)'`).FindStringSubmatch(verifier)
+	if required == nil {
+		t.Fatal("release verification does not require an upgrade baseline version")
+	}
+	version := required[1]
+	for _, want := range []string{
+		"$baselineReport.version -ne '" + version + "'",
+		"$receipt.baseline -ne '" + version + "'",
+		"{ '" + version + "' } else { '' })",
+	} {
+		if !strings.Contains(workflow, want) {
+			t.Errorf("workflow upgrade baseline differs from the verifier's %s: missing %s", version, want)
+		}
+	}
+	commit := regexp.MustCompile(`\$baselineCommit = '([0-9a-f]{40})'`).FindStringSubmatch(workflow)
+	if commit == nil || !strings.Contains(workflow, "baseline_source = '"+commit[1]+"'") {
+		t.Fatal("recorded baseline source differs from the rebuilt baseline commit")
+	}
+	published := regexp.MustCompile(`-le \[version\]'1\.1\.8' -or (@\([^)]*\)) -contains`).FindStringSubmatch(verifier)
+	if published == nil || !strings.Contains(published[1], "'"+version+"'") || !strings.Contains(workflow, published[1]) {
+		t.Fatalf("upgrade baseline %s is not a published fork version shared by the workflow and verifier", version)
+	}
+}
+
 func TestWindowsTaskRollbackRetainsRuntimeOwner(t *testing.T) {
 	data, err := os.ReadFile("../install/install.ps1")
 	if err != nil {

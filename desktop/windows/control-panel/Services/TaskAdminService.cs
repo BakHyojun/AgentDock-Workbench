@@ -373,7 +373,7 @@ internal static class TaskAdminService
         return (state, xml, userId);
     }
 
-    // 1.1.16102 wrote bound schema-1 records. This read-only adapter is confined
+    // Earlier fork builds wrote bound schema-1 records. This read-only adapter is confined
     // to explicitly supplied recovery input; new backups always use schema 2.
     // It neither upgrades the original bytes nor accepts anonymous absence.
     private static void ValidateLegacyRecoveryState(TaskBackupState state)

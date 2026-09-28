@@ -54,7 +54,7 @@ $functions=@($ast.FindAll({param($node) $node -is [Management.Automation.Languag
 if($functions.Count -ne 1){throw 'Single existing acceptance owner is required'}
 . ([scriptblock]::Create($functions[0].Extent.Text))
 $commit='0123456789012345678901234567890123456789'
-$good=@{schema_version=1;repository='eerraa/AgentDock-Workbench';version='1.1.8101';commit=$commit;resolved_commit=$commit;linux_tested_commit=$commit;native_architecture='amd64';baseline_version='1.1.16102';production_touched=$false}
+$good=@{schema_version=1;repository='eerraa/AgentDock-Workbench';version='1.1.8101';commit=$commit;resolved_commit=$commit;linux_tested_commit=$commit;native_architecture='amd64';baseline_version='1.1.8100';production_touched=$false}
 $gates=@('automated_regression','metadata_checksums','linux_backend','linux_race','native_recovery','offscreen_layout','korean_validation','installation_tests','upgrade_recovery')
 foreach($gate in $gates){$good[$gate]='passed'}
 Assert-WindowsReleaseAcceptance ([pscustomobject]$good) $good.version $commit
@@ -73,7 +73,7 @@ foreach($value in @($true,'false',0,1)) {
     if(-not $rejected){throw 'Ambiguous production safety field accepted'}
     $checks++
 }
-foreach($version in @('1.1.7','1.1.8','1.1.6100','1.1.16101','1.1.16102','1.1.8100')) {
+foreach($version in @('1.1.7','1.1.8','1.1.6100','1.1.8100')) {
     $bad=$good.Clone();$bad.version=$version;$rejected=$false
     try {Assert-WindowsReleaseAcceptance ([pscustomobject]$bad) $version $commit} catch {$rejected=$true}
     if(-not $rejected){throw ('Upstream-baseline or reused fork version accepted: '+$version)}

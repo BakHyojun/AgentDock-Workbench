@@ -33,8 +33,8 @@ function Assert-WindowsReleaseAcceptance {
         $Scope.resolved_commit -cne $Commit -or $Scope.linux_tested_commit -cne $Commit) {
         throw 'release_acceptance_identity: evidence does not identify the verified fork source.'
     }
-    if ([version]$Version -le [version]'1.1.8' -or @('1.1.6100','1.1.16101','1.1.16102','1.1.8100') -contains $Version -or $Scope.native_architecture -cne 'amd64' -or
-        $Scope.baseline_version -cne '1.1.16102' -or $Scope.production_touched -isnot [bool] -or $Scope.production_touched) {
+    if ([version]$Version -le [version]'1.1.8' -or @('1.1.6100','1.1.8100') -contains $Version -or $Scope.native_architecture -cne 'amd64' -or
+        $Scope.baseline_version -cne '1.1.8100' -or $Scope.production_touched -isnot [bool] -or $Scope.production_touched) {
         throw 'release_acceptance_scope: native x64, a newer version and an isolated historical upgrade are required.'
     }
     foreach ($name in @('automated_regression','metadata_checksums','linux_backend','linux_race',

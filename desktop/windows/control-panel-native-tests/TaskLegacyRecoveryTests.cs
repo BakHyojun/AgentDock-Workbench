@@ -89,8 +89,8 @@ internal static partial class Program
             original.Enabled=false;
             string xml=original.Xml;
             string security=original.GetSecurityDescriptor(4);
-            // Exact field set and text encodings written by the preserved
-            // 1.1.16102 TaskAdmin, with an isolated task name/root/current SID.
+            // Exact field set and text encodings written by the earlier fork
+            // schema-1 TaskAdmin, with an isolated task name/root/current SID.
             var state=new {SchemaVersion=1,RuntimeRoot=directory,TaskName=name,UserSid=identity.User.Value,
                 Exists=true,WasEnabled=false,WasRunning=false,SecurityDescriptor=security};
             var statePath=Path.Combine(recovery,"state.json"); var xmlPath=Path.Combine(recovery,"task.xml");
