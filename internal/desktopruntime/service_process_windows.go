@@ -243,6 +243,10 @@ func queryProcessPath(processID uint32) (string, error) {
 		return "", err
 	}
 	defer windows.CloseHandle(process)
+	return queryProcessHandlePath(process)
+}
+
+func queryProcessHandlePath(process windows.Handle) (string, error) {
 	buffer := make([]uint16, 32768)
 	size := uint32(len(buffer))
 	if err := windows.QueryFullProcessImageName(process, 0, &buffer[0], &size); err != nil {

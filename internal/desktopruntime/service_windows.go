@@ -24,16 +24,17 @@ func platformServiceStatus(ctx context.Context, runtimeRoot string) (ServiceStat
 		return ServiceStatus{}, err
 	}
 	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
-	running, err := processRunningAtPath(coreBinary)
+	corePIDs, err := selectedProcessIDsAtPath(coreBinary, nil, coreProcessRole(runtimeRoot))
 	if err != nil {
 		return ServiceStatus{}, err
 	}
-	healthy := testHealth(ctx, manifest.HealthURL())
+	running := len(corePIDs) != 0
+	healthy := running && testHealth(ctx, manifest.HealthURL())
 	startupEnabled, err := coreAutostartEnabled(ctx, manifest)
 	if err != nil {
 		return ServiceStatus{}, fmt.Errorf("读取 AgentDock 开机启动状态失败: %w", err)
 	}
-	return ServiceStatus{Running: running || healthy, Healthy: healthy, StartupEnabled: startupEnabled}, nil
+	return ServiceStatus{Running: running, Healthy: healthy, StartupEnabled: startupEnabled}, nil
 }
 
 func platformServiceAction(ctx context.Context, runtimeRoot, action string) error {
@@ -88,7 +89,11 @@ func startCore(ctx context.Context, manifest Manifest, runtimeRoot string) error
 }
 
 func stopCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
+	matches := coreProcessRole(runtimeRoot)
 	excluded := map[uint32]struct{}{}
 	ancestorPIDs, err := ancestorProcessIDsAtPath(coreBinary)
 	if err != nil {
@@ -110,7 +115,7 @@ func stopCore(ctx context.Context, manifest Manifest, runtimeRoot string) error 
 	if manifest.UsesScheduledTask() {
 		// 先让任务计划程序正常结束最高权限进程，避免普通托盘立即申请 PROCESS_TERMINATE。
 		_ = runScheduledTaskCommand(ctx, "/End", "/TN", scheduledTaskPath(manifest.AgentDockTaskName))
-		stopped, waitErr := waitBinaryStoppedExcept(ctx, coreBinary, excluded, 5*time.Second)
+		stopped, waitErr := waitSelectedBinaryStopped(ctx, coreBinary, excluded, 5*time.Second, matches)
 		if waitErr != nil {
 			return waitErr
 		}
@@ -118,7 +123,7 @@ func stopCore(ctx context.Context, manifest Manifest, runtimeRoot string) error 
 			return nil
 		}
 	}
-	if err := stopBinaryProcessesExcept(ctx, coreBinary, excluded, 15*time.Second); err != nil {
+	if err := stopSelectedBinaryProcesses(ctx, coreBinary, excluded, 15*time.Second, matches); err != nil {
 		return fmt.Errorf("停止 AgentDock 核心失败: %w", err)
 	}
 	return nil
