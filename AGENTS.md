@@ -42,8 +42,9 @@ without tasks, old records, rejected writes and asynchronous command completion.
 
 Fork state map: `docs/eerraa/fork-map.ko.md` (identity, fork delta owners and
 invariants, upstream merge checklist, verification commands, local build). Update
-it with every fork change; keep history in Git, not in documents. The source
-baseline is the Workbench v1.1.8 prerelease tag
+it with every fork change; keep history in Git, not in documents. Record
+project knowledge in the repository, not in agent-private memory, and only what
+a future agent needs. The source baseline is the Workbench v1.1.8 prerelease tag
 `4bd778d4077bbe58cfe19e4abb777f660694377b`. Keep only pinned rg, Korean
 presentation, the CUA desktop plugin (`plugins/cua-driver`) and
 reproducer-proven minimal fixes at the existing owners. Do not reintroduce

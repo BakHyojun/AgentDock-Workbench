@@ -74,7 +74,8 @@ Setup receipt 공유 위반 대기는 업스트림 `internal/desktopruntime/setu
 2. `$env:GOTOOLCHAIN='go1.26.5'`, `$env:PATH="D:\Engineering\.agentdock-build-tools\inno;$env:PATH"`.
 3. `pwsh packaging/windows/build-windows-release.ps1 -Architectures amd64 -OutputDirectory <out> [-Candidate]`. 공식 cloudflared를 내려받아 Authenticode를 검사한다. 산출물은 `<out>/release/AgentDockSetup-amd64.exe`.
 4. `scripts/test/verify-windows-release-assets.ps1`로 버전, commit, rg 5개 파일, checksum을 검사한다. 서명 상태는 unsigned다.
-5. 게시하려면 head 커밋에 `[skip ci]`를 넣고, 태그 `v<ver>`, `docs/releases/v<ver>.md`를 준비한다. 운영 PC에서 Setup을 실행하지 않는다(사용자가 직접 한다).
+5. 게시하려면 head 커밋과 annotated 태그 메시지에 `[skip ci]`를 넣고, 태그 `v<ver>`, `docs/releases/v<ver>.md`를 준비한다. 운영 PC에서 Setup을 실행하지 않는다(사용자가 직접 한다).
+6. draft로 올린다 → 다시 내려받아 로컬 게시 자산과 해시를 비교한다 → latest(prerelease 아님)로 공개한다 → 한 번 더 내려받아 확인한다.
 
 ## 5. 제약·보류
 
