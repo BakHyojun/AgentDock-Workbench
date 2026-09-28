@@ -16,12 +16,13 @@ import (
 
 func runPluginCommand(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("用法：agentdock plugin validate --source <目录或ZIP> | migrate --home <离线数据目录> | list --home <数据目录>")
+		return errors.New("用法：agentdock plugin validate --source <目录或ZIP> | migrate --home <离线数据目录> | list --home <数据目录> | bootstrap --bundle <随包插件目录> --home <数据目录>")
 	}
 	flags := flag.NewFlagSet("agentdock plugin "+args[0], flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	source := flags.String("source", "", "标准插件目录或ZIP")
 	home := flags.String("home", "", "显式数据目录；migrate 前应停止该实例")
+	bundle := flags.String("bundle", "", "随安装包提供的插件目录（bootstrap）")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -62,6 +63,21 @@ func runPluginCommand(ctx context.Context, args []string, stdout, stderr io.Writ
 			return fmt.Errorf("插件包含 %d 项校验提示", len(definition.Diagnostics))
 		}
 		return nil
+	case "bootstrap":
+		// Setup provides bundled plugins after a committed install. The store keeps
+		// the user's own namesakes, removals and switches; see ProvisionBundled.
+		if !filepath.IsAbs(*home) || !filepath.IsAbs(*bundle) || *source != "" {
+			return errors.New("bootstrap 需要 --bundle 与 --home 绝对目录，且不接受 --source")
+		}
+		store, err := plugin.New(*home)
+		if err != nil {
+			return err
+		}
+		results, provisionErr := store.ProvisionBundled(*bundle)
+		if err := json.NewEncoder(stdout).Encode(map[string]any{"bundled_plugins": results}); err != nil {
+			return err
+		}
+		return provisionErr
 	case "list":
 		if !filepath.IsAbs(*home) || *source != "" {
 			return errors.New("list 需要 --home 绝对目录，且不接受 --source")

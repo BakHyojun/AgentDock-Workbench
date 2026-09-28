@@ -78,6 +78,10 @@ try {
         & python ./packaging/build-core-skill-bundle.py --output (Join-Path $payload 'share\agentdock\core-skills')
         Assert-NativeExit 'Core Skill bundle'
         Copy-Item -LiteralPath (Join-Path $repository 'LICENSE') -Destination (Join-Path $payload 'share\agentdock\LICENSE') -Force
+        # Bundled Agent Plugins; Setup provisions them after a committed install.
+        $bundledPlugins = Join-Path $payload 'share\agentdock\plugins'
+        if (Test-Path -LiteralPath $bundledPlugins) { Remove-Item -LiteralPath $bundledPlugins -Recurse -Force }
+        Copy-Item -LiteralPath (Join-Path $repository 'plugins') -Destination $bundledPlugins -Recurse
         if ($architecture -eq 'amd64') {
             & (Join-Path $PSScriptRoot 'prepare-bundled-rg.ps1') `
                 -Destination (Join-Path $payload 'share\agentdock\bin') `

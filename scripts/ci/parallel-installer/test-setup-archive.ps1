@@ -144,6 +144,31 @@ try {
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $rgDestination 'share\agentdock\bin\rg.exe.bak'))) 'near-match bundled file was selected'
     Assert-True ($rg.selected_entry_count -eq 16) "unexpected selected count with bundled rg: $($rg.selected_entry_count)"
 
+    # Bundled Agent Plugins travel with the payload so Setup can provision them.
+    $pluginArchive = Join-Path $normalRoot 'bundled-plugins.zip'
+    $pluginDestination = Join-Path $normalRoot 'plugin-extract'
+    New-TestArchive -Path $pluginArchive -Mutate {
+        param($archive)
+        Add-TestEntry -Archive $archive -Name 'share/agentdock/plugins/cua-driver/plugin.json' -Content '{}'
+        Add-TestEntry -Archive $archive -Name 'share/agentdock/plugins/cua-driver/skills/cua-desktop/SKILL.md' -Content 'skill'
+    }
+    $plugins = Expand-AgentDockReleaseArchive -ArchivePath $pluginArchive -DestinationPath $pluginDestination
+    Assert-True ($plugins.selected_entry_count -eq 13) "bundled plugin entries were not selected: $($plugins.selected_entry_count)"
+    Assert-True (Test-Path -LiteralPath (Join-Path $pluginDestination 'share\agentdock\plugins\cua-driver\skills\cua-desktop\SKILL.md')) 'bundled plugin skill was not extracted'
+
+    # Provisioning is best effort after commit: it reports a warning and never throws.
+    $fakeCore = Join-Path $normalRoot 'fake-core.cmd'
+    [IO.File]::WriteAllText($fakeCore, "@echo {""bundled_plugins"":[{""name"":""cua-driver"",""action"":""failed""}]}`r`n@exit /b %FAKE_CORE_EXIT%`r`n")
+    $pluginHome = Join-Path $normalRoot 'plugin-home'
+    $bundle = Join-Path $pluginDestination 'share\agentdock\plugins'
+    Assert-True ((Invoke-AgentDockBundledPluginBootstrap -CoreBinary $fakeCore -BundleDirectory (Join-Path $normalRoot 'absent') -AgentDockHome $pluginHome) -eq '') 'missing plugin bundle produced a warning'
+    $env:FAKE_CORE_EXIT = '0'
+    Assert-True ((Invoke-AgentDockBundledPluginBootstrap -CoreBinary $fakeCore -BundleDirectory $bundle -AgentDockHome $pluginHome) -eq '') 'successful plugin provisioning produced a warning'
+    $env:FAKE_CORE_EXIT = '1'
+    $warning = Invoke-AgentDockBundledPluginBootstrap -CoreBinary $fakeCore -BundleDirectory $bundle -AgentDockHome $pluginHome
+    Remove-Item Env:FAKE_CORE_EXIT
+    Assert-True ($warning.Contains('Bundled plugins could not be provisioned') -and $warning.Contains('"failed"')) "failed plugin provisioning was not reported: $warning"
+
     # Setup must refuse an x64 payload that lost the component instead of
     # installing a generation without rg; other architectures never carry it.
     Assert-AgentDockBundledRgPayload -ExtractDir $rgDestination -Architecture 'amd64'

@@ -164,6 +164,8 @@ try {
     $packagedLicense = Resolve-RequiredFile (Join-Path $temporaryRoot 'share\agentdock\LICENSE') 'Repository license'
     if ((Get-FileHash -LiteralPath $packagedLicense -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot '..\..\LICENSE') -Algorithm SHA256).Hash) { throw 'Windows package license mismatch.' }
     if ($desktopProduct -ne 'AgentDock Workbench') { throw "Unexpected desktop product name: $desktopProduct" }
+    $pluginBundle = Join-Path $temporaryRoot 'share\agentdock\plugins'; $pluginBootstrapState = 'not_run_non_native_architecture'
+    foreach ($relative in @('cua-driver\plugin.json','cua-driver\mcp.json','cua-driver\skills\cua-desktop\SKILL.md')) { [void](Resolve-RequiredFile (Join-Path $pluginBundle $relative) 'Bundled CUA plugin file') }
     $expectedSkills = @('agentdock-user-guide','skill-authoring','skill-installation')
     $bootstrapState = if ($native) { 'passed' } else { 'not_run_non_native_architecture' }
     if ($native) {
@@ -209,6 +211,14 @@ try {
             [void](Resolve-RequiredFile -Path (Join-Path $skillHome "skills/.system/$($entry.name)/SKILL.md") -Description 'Installed core Skill')
         }
     }
+    $pluginHome = Join-Path $temporaryRoot 'plugin-bootstrap-home'
+    foreach ($expected in @('installed', 'current')) {
+        $output = (& $corePath plugin bootstrap --bundle $pluginBundle --home $pluginHome | Out-String); $bootstrapExit = $LASTEXITCODE
+        $cua = @(($output | ConvertFrom-Json).bundled_plugins | Where-Object { $_.name -eq 'cua-driver' })
+        if ($bootstrapExit -ne 0 -or $cua.Count -ne 1 -or $cua[0].action -ne $expected) { throw "Packaged CUA plugin was not $expected by bootstrap: $output" }
+    }
+    [void](Resolve-RequiredFile (Join-Path $pluginHome 'plugins\cua-driver\skills\cua-desktop\SKILL.md') 'Provisioned CUA plugin')
+    $pluginBootstrapState = 'passed'
     }
 } finally {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -230,6 +240,7 @@ if ($setupVersion -ne $ExpectedVersion) {
     cloudflared_authenticode = 'valid'
     core_skill_bootstrap = @{ fresh = $bootstrapState; repeat = $bootstrapState; count = $expectedSkills.Count }
     bundled_ripgrep = $rgVerification
+    bundled_plugin_bootstrap = $pluginBootstrapState
     assets = $digests
     verified_at = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
 } | ConvertTo-Json -Depth 5

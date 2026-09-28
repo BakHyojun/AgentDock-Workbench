@@ -51,6 +51,35 @@ func TestWindowsSetupRequiresBundledRgAfterExtraction(t *testing.T) {
 	}
 }
 
+// Bundled plugins ship in every Windows payload and are provisioned only after
+// the install commits, so a plugin failure can never roll back a healthy Core.
+func TestWindowsSetupProvisionsBundledPluginsAfterCommit(t *testing.T) {
+	read := func(path string) string {
+		t.Helper()
+		data, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(path)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	installer := read("scripts/install/install.ps1")
+	committed := strings.Index(installer, "$engineCommitted = $true")
+	provision := strings.Index(installer, "$pluginWarningMessage = Invoke-AgentDockBundledPluginBootstrap")
+	tunnel := strings.Index(installer, "if ($RegisterStartup -and $resolvedTunnelMode -ne 'none')")
+	if committed < 0 || provision < committed || tunnel < provision {
+		t.Fatalf("bundled plugins must be provisioned after commit and before tunnel start: %d %d %d", committed, provision, tunnel)
+	}
+	if !strings.Contains(installer, "$Name.StartsWith('share/agentdock/plugins/', [StringComparison]::Ordinal)") {
+		t.Fatal("Setup payload selection drops bundled plugins")
+	}
+	if !strings.Contains(read("packaging/windows/build-windows-release.ps1"), "Copy-Item -LiteralPath (Join-Path $repository 'plugins') -Destination $bundledPlugins -Recurse") {
+		t.Fatal("Windows payload does not carry the repository plugins")
+	}
+	if !strings.Contains(read("scripts/test/verify-windows-release-assets.ps1"), "plugin bootstrap --bundle $pluginBundle --home $pluginHome") {
+		t.Fatal("release verification does not provision the packaged plugins")
+	}
+}
+
 func TestWindowsTaskRollbackRetainsRuntimeOwner(t *testing.T) {
 	data, err := os.ReadFile("../install/install.ps1")
 	if err != nil {

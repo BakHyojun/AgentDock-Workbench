@@ -1060,6 +1060,7 @@ function Test-AgentDockReleasePayloadPath {
         return $true
     }
     return $Name.StartsWith('share/agentdock/core-skills/', [StringComparison]::Ordinal) -or
+        $Name.StartsWith('share/agentdock/plugins/', [StringComparison]::Ordinal) -or
         $Name.StartsWith('wsl-helper/', [StringComparison]::Ordinal)
 }
 
@@ -1093,6 +1094,27 @@ function Assert-AgentDockBundledRgPayload {
             throw "Release archive does not contain the bundled ripgrep component: $relative"
         }
     }
+}
+
+# Bundled Agent Plugins (for example the CUA desktop plugin) are provisioned
+# into the user's plugin store after the install is committed. The store keeps
+# plugins the user installed separately or removed, and their enabled switches.
+# Returns a warning text; a failure never rolls back the committed Core.
+function Invoke-AgentDockBundledPluginBootstrap {
+    param(
+        [Parameter(Mandatory = $true)][string] $CoreBinary,
+        [Parameter(Mandatory = $true)][string] $BundleDirectory,
+        [Parameter(Mandatory = $true)][string] $AgentDockHome
+    )
+
+    if (-not (Test-Path -LiteralPath $BundleDirectory -PathType Container)) {
+        return ''
+    }
+    $output = (& $CoreBinary plugin bootstrap --bundle $BundleDirectory --home $AgentDockHome 2>$null | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        return "Bundled plugins could not be provisioned: $output"
+    }
+    return ''
 }
 
 function Expand-AgentDockReleaseArchive {
@@ -2431,6 +2453,20 @@ exit `$LASTEXITCODE
             throw 'Installer Engine failed to commit the install transaction.'
         }
         $engineCommitted = $true
+    }
+
+    $pluginWarningMessage = Invoke-AgentDockBundledPluginBootstrap `
+        -CoreBinary $sourceBinary `
+        -BundleDirectory (Join-Path $extractDir 'share\agentdock\plugins') `
+        -AgentDockHome $runtimeAgentDockHome
+    if (-not [string]::IsNullOrWhiteSpace($pluginWarningMessage)) {
+        Write-Warning $pluginWarningMessage
+        $installWarningMessage = ($installWarningMessage + ' AgentDock was installed, but bundled plugins such as the CUA desktop plugin could not be provided. They can be installed manually.').Trim()
+        if ([string]::IsNullOrWhiteSpace($installWarningCode)) {
+            $installWarningCode = 'bundled-plugins-deferred'
+        } else {
+            $installWarningCode = "$installWarningCode,bundled-plugins-deferred"
+        }
     }
 
     # Core is authoritative for install/update success. Start Tunnel only after commit and do it
