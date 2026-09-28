@@ -8,6 +8,7 @@
 |---|---|
 | 저장소 | origin `eerraa/AgentDock-Workbench` (push 대상). upstream·workbench `A-m-o-r-F-a-t-i/AgentDock-Workbench` (읽기 전용, push 금지). uvwt `uvwt/agentdock` (원조, 참고용) |
 | 소스 기준선 | upstream `v1.1.8` 프리릴리스 `4bd778d4077bbe58cfe19e4abb777f660694377b`를 main에 병합한 상태. 이전 기준선은 `v1.1.7` `b367eaab` |
+| 이력 구조 | upstream main의 커밋 전부(뒤진 커밋 0) → upstream main 밖의 기준 태그 병합(`v1.1.8`, 원본 SHA 그대로) → fork 커밋을 기능·결함 수리 단위로 둔다. 2026-09-28 사용자 요청으로 한 번 재구성했다. 이전 이력은 태그 `v1.1.17100`·`v1.1.8100`에만 남고, 태그는 옮기지 않는다 |
 | 버전 규칙 | `1.1.<upstream patch>100(+수정 번호)`. 현재 게시본 `1.1.8100`(태그 `v1.1.8100`). 게시된 fork 버전(`1.1.6100`, `1.1.16101`, `1.1.16102`, `1.1.17100`, `1.1.8100`)은 재사용하지 않는다. 앱 내 업데이트가 없으므로 이전 fork 버전보다 클 필요는 없다 |
 | 버전 선언 위치 | `internal/buildinfo/buildinfo.go`, `desktop/windows/control-panel/AgentDock.ControlPanel.csproj`. `go run ./tools/release version`과 `verify-version v<ver>`로 확인 |
 | 업데이트 | Setup으로만 한다. 트레이·창의 업데이트 항목은 fork Releases 페이지 안내만 하고, `agentdock update`는 `--local-archive`만 허용한다 |
@@ -44,7 +45,8 @@ Setup receipt 공유 위반 대기는 업스트림 `internal/desktopruntime/setu
 
 ## 2. 다음 upstream 병합 절차
 
-1. `git fetch upstream --tags` → main에서 `feat/rebase-<ver>` → `git merge --no-ff --no-commit v<ver>`.
+1. `git fetch upstream --tags` → main에서 `feat/rebase-<ver>` → upstream main에 새 커밋이 있으면 `git merge --no-ff upstream/main`, 새 기준 태그가 upstream main 밖에 있으면 `git merge --no-ff --no-commit v<ver>`. upstream 커밋을 rebase나 cherry-pick으로 복제하지 않는다. 그래야 upstream 대비 뒤진 커밋이 0으로 남는다.
+   fork 변경은 기능·결함 수리 하나당 커밋 하나로 둔다. 같은 주제의 보정 커밋은 push 전에 합친다.
 2. 충돌은 양쪽을 보존한다. 업스트림 동작과 fork 불변식(1절)을 함께 만족시킨다. 1.1.8 병합 때 충돌한 곳은 workflow repository 조건, 제어판 csproj·XAML·ExecutionModels·InsertionPresentation·PermissionSettingsEditor·Sidebar, buildinfo, setup_launcher, oauth.go, selfupdate/update.go, AgentDock.iss, governance inventory, install.ps1이었다.
 3. **조용히 빠지는 곳을 반드시 확인한다.** 충돌 없이 병합돼도 다음은 깨질 수 있다.
    - 새 payload 허용 목록이나 추출기가 `share/agentdock/bin`을 빠뜨리는지(1.1.8의 install.ps1과 selfupdate가 실제로 빠뜨렸다).
