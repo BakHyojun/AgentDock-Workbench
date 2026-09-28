@@ -27,7 +27,7 @@ public sealed partial class RuntimeService : IDisposable
         WriteIndented = true
     };
 
-    private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private readonly HttpClient _httpClient = new(LoopbackHttp.CreateHandler()) { Timeout = TimeSpan.FromSeconds(10) };
 
     public RuntimeService(string? runtimeRoot = null)
     {

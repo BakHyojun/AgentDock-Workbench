@@ -206,5 +206,6 @@ Check(!childStats.HasEditStatistics && childStats.AddedLinesText == "", "child s
 await PrivilegeTransitionTests.Run(Check);
 OutputPolicyTests.Run(Check);
 InsertionTimelineTests.Run(Check);
+await LoopbackHttpTests.Run(Check);
 Console.WriteLine($"Desktop pure-policy regression passed: {assertions} assertions. No UI or installer was launched.");
 internal sealed record Row(string Id, DateTimeOffset At, bool Pinned = false);

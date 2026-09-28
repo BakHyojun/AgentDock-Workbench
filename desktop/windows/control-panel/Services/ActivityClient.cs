@@ -32,13 +32,7 @@ internal sealed partial class ActivityClient : IDisposable
     private readonly Func<CancellationToken, Task<ActivityConnection>> _connection;
     private readonly HttpClient _http;
 
-    internal ActivityClient(RuntimeService runtime) : this(runtime.GetActivityConnectionAsync, new SocketsHttpHandler
-    {
-        UseProxy = false,
-        AllowAutoRedirect = false,
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-    }) { }
+    internal ActivityClient(RuntimeService runtime) : this(runtime.GetActivityConnectionAsync, LoopbackHttp.CreateHandler()) { }
 
     // Keep transport ownership explicit. Isolated contract tests inject an
     // in-memory handler; production retains the loopback connection resolver.
