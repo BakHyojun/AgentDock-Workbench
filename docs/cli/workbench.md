@@ -194,7 +194,7 @@ Linux systemd 使用 `journalctl`；OpenRC、macOS 和 Windows 只读取安装�
 以下旧入口保持原语义，不会被在线控制命令抢占：
 
 - `agentdock --version`、`agentdock version [--json]`；
-- `agentdock update ...`；
+- `agentdock update --local-archive ...`（本 fork 只通过 Setup 更新，在线检查与下载会被拒绝）；
 - `agentdock skill bootstrap --bundle ...`；
 - `agentdock plugin validate ...`、`plugin migrate --home ...`、`plugin list --home ...`；
 - `agentdock install`、`uninstall`、`nexus`、`tunnel` 和无子命令的服务器启动参数。

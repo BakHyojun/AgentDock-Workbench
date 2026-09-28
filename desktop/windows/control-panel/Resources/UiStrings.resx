@@ -309,20 +309,6 @@
   <data name="Stopped" xml:space="preserve">
     <value>Stopped</value>
   </data>
-  <data name="PleaseWaitCheckingUpdates" xml:space="preserve">
-    <value>Checking for updates, please wait…</value>
-  </data>
-  <data name="NewVersionPrompt" xml:space="preserve">
-    <value>A new AgentDock Workbench version is available.
-
-Current version: {0}
-Latest version: {1}
-
-Update now?</value>
-  </data>
-  <data name="UpdateCancelled" xml:space="preserve">
-    <value>Update cancelled.</value>
-  </data>
   <data name="UpdateCompleted" xml:space="preserve">
     <value>Update completed.</value>
   </data>
@@ -367,9 +353,6 @@ Update now?</value>
   </data>
   <data name="UpdateDownloadingUnknownSize" xml:space="preserve">
     <value>Downloading update… {0}</value>
-  </data>
-  <data name="UpdateCheckFailed" xml:space="preserve">
-    <value>Failed to check for updates.</value>
   </data>
   <data name="OperationFailed" xml:space="preserve">
     <value>Operation failed.</value>
@@ -3277,4 +3260,6 @@ Shortcuts: Ctrl+F searches conversations, F5 refreshes, Esc closes details, and 
   <data name="SidebarPageResponseInvalid" xml:space="preserve"><value>The conversation list response is invalid; the last trusted list is kept ({0}, response generation {1}).</value></data>
   <data name="SidebarWorkspaceResponseInvalid" xml:space="preserve"><value>The project conversation response is invalid; the last trusted content for this project is kept ({0}, response generation {1}).</value></data>
   <data name="SidebarMoreIsolated" xml:space="preserve"><value>{0} more project responses were isolated.</value></data>
+  <data name="ForkUpdateThroughSetup" xml:space="preserve"><value>This build is not updated from inside the app. Download and run the new Setup from the Releases page. Open the Releases page now?</value></data>
+  <data name="ForkReleasesOpenFailed" xml:space="preserve"><value>The browser could not be opened. Open this page manually: {0}</value></data>
 </root>

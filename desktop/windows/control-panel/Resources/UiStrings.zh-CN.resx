@@ -309,20 +309,6 @@
   <data name="Stopped" xml:space="preserve">
     <value>已停止</value>
   </data>
-  <data name="PleaseWaitCheckingUpdates" xml:space="preserve">
-    <value>正在检查更新，请稍候…</value>
-  </data>
-  <data name="NewVersionPrompt" xml:space="preserve">
-    <value>发现 AgentDock Workbench 新版本。
-
-当前版本：{0}
-最新版本：{1}
-
-是否立即更新？</value>
-  </data>
-  <data name="UpdateCancelled" xml:space="preserve">
-    <value>已取消更新。</value>
-  </data>
   <data name="UpdateCompleted" xml:space="preserve">
     <value>更新完成。</value>
   </data>
@@ -367,9 +353,6 @@
   </data>
   <data name="UpdateDownloadingUnknownSize" xml:space="preserve">
     <value>正在下载更新… {0}</value>
-  </data>
-  <data name="UpdateCheckFailed" xml:space="preserve">
-    <value>检查更新失败。</value>
   </data>
   <data name="OperationFailed" xml:space="preserve">
     <value>操作失败。</value>
@@ -3277,4 +3260,6 @@
   <data name="SidebarPageResponseInvalid" xml:space="preserve"><value>对话列表响应无效，已保留上次可信列表（{0}，响应代次 {1}）。</value></data>
   <data name="SidebarWorkspaceResponseInvalid" xml:space="preserve"><value>项目对话响应无效，已保留该项目上次可信内容（{0}，响应代次 {1}）。</value></data>
   <data name="SidebarMoreIsolated" xml:space="preserve"><value>另有 {0} 个项目响应被隔离。</value></data>
+  <data name="ForkUpdateThroughSetup" xml:space="preserve"><value>此版本不在应用内更新。请从 Releases 页面下载并运行新的 Setup。是否现在打开 Releases 页面？</value></data>
+  <data name="ForkReleasesOpenFailed" xml:space="preserve"><value>无法打开浏览器。请手动访问：{0}</value></data>
 </root>

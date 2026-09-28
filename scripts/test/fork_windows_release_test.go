@@ -2,9 +2,38 @@ package scripts
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestWindowsForkDistributionTargets(t *testing.T) {
+	const repository = "eerraa/AgentDock-Workbench"
+	for _, item := range []struct {
+		path    string
+		markers []string
+	}{
+		{"internal/selfupdate/update.go", []string{"https://api.github.com/repos/" + repository + "/releases/latest"}},
+		{"scripts/install/install.ps1", []string{"https://github.com/" + repository + "/releases/latest/download", "https://github.com/" + repository + "/releases/download/$normalizedVersion"}},
+		{"packaging/windows/AgentDock.iss", []string{"AppPublisherURL=https://github.com/" + repository, "AppSupportURL=https://github.com/" + repository + "/issues", "AppUpdatesURL=https://github.com/" + repository + "/releases"}},
+	} {
+		t.Run(item.path, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(item.path)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, marker := range item.markers {
+				if !strings.Contains(string(data), marker) {
+					t.Errorf("fork distribution destination missing: %s", marker)
+				}
+			}
+			// Upstream renamed its repository; reject every upstream owner address.
+			if strings.Contains(strings.ToLower(string(data)), "a-m-o-r-f-a-t-i/") {
+				t.Error("Windows fork can still resolve an upstream update payload")
+			}
+		})
+	}
+}
 
 // Setup refuses an x64 payload without the pinned rg component because the
 // installer engine accepts its absence for legacy payloads.

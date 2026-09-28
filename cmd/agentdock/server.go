@@ -39,7 +39,7 @@ func runServer(ctx context.Context, args []string, stderr io.Writer) error {
 		fmt.Fprintln(stderr, "  agentdock [服务参数]")
 		fmt.Fprintln(stderr, "  agentdock --version")
 		fmt.Fprintln(stderr, "  agentdock version [--json]")
-		fmt.Fprintln(stderr, "  agentdock update [--check]")
+		fmt.Fprintln(stderr, "  agentdock update --local-archive <zip> --checksum <sha256> --target-version <版本>")
 		fmt.Fprintln(stderr, "  agentdock service <status|start|stop|restart|autostart> --runtime-root <目录>")
 		fmt.Fprintln(stderr, "  agentdock tunnel <status|start|stop|restart|regenerate|configure|autostart> --runtime-root <目录>")
 		fmt.Fprintln(stderr, "  agentdock skill bootstrap --bundle <目录>")

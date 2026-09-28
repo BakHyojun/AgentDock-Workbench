@@ -404,14 +404,19 @@ func TestWindowsUpdateFeedbackUsesUTF8AndImmediateStatus(t *testing.T) {
 	progressXAML := string(progressXAMLData)
 	progressCode := string(progressCodeData)
 
+	// The fork publishes only Setup: the tray and window entry point offers the
+	// fork Releases page and never checks, downloads or applies an update.
+	for _, forbidden := range []string{`Runtime.CheckForUpdatesAsync(`, `Runtime.RunUpdateAsync(`} {
+		if strings.Contains(app, forbidden) {
+			t.Fatalf("Windows fork update entry point must not start the online updater: %q", forbidden)
+		}
+	}
 	for _, want := range []string{
 		`_updateInProgress ? UiText.Get("CheckingForUpdates") : UiText.Get("CheckForUpdates")`,
-		`ControlPanelWindow.SetUpdateState(true, UiText.Get("PleaseWaitCheckingUpdates"))`,
-		`var check = await Runtime.CheckForUpdatesAsync()`,
-		`if (!check.UpdateAvailable)`,
-		`MessageBoxButton.YesNo`,
-		`new UpdateProgressWindow(check.CurrentVersion, check.LatestVersion)`,
-		`var output = await Runtime.RunUpdateAsync(progress)`,
+		`ShowUpdateMessage(owner, UiText.Get("ForkUpdateThroughSetup"), MessageBoxButton.YesNo`,
+		`if (_updateInProgress || _releasesPromptOpen)`,
+		`_releasesPromptOpen = false;`,
+		`"https://github.com/eerraa/AgentDock-Workbench/releases"`,
 		`ResumeUpdateProgressIfNeededAsync`,
 		`ReadUpdateUiHandoffTransactionAsync`,
 		`ReadUpdateTerminalResultAsync`,

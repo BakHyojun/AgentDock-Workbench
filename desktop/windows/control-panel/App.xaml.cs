@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -28,6 +29,7 @@ public partial class App : System.Windows.Application
     private RuntimeSnapshot? _traySnapshot;
     private bool _traySnapshotRefreshInProgress;
     private bool _updateInProgress;
+    private bool _releasesPromptOpen;
     private bool _ownsSingleInstanceMutex;
     private bool _exitRequested;
 
@@ -530,70 +532,38 @@ public partial class App : System.Windows.Application
         }
     }
 
-    public async Task CheckForUpdatesAsync(Window? owner = null)
+    // This fork publishes only Setup installers. Updating means running a new
+    // Setup, so this entry point downloads nothing and only offers the page.
+    private const string ForkReleasesUrl = "https://github.com/eerraa/AgentDock-Workbench/releases";
+
+    public Task CheckForUpdatesAsync(Window? owner = null)
     {
-        if (_updateInProgress)
+        // The tray stays usable while the window's modal prompt is open.
+        if (_updateInProgress || _releasesPromptOpen)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        _updateInProgress = true;
-        ControlPanelWindow.SetUpdateState(true, UiText.Get("PleaseWaitCheckingUpdates"));
-        UpdateProgressWindow? progressWindow = null;
+        _releasesPromptOpen = true;
         try
         {
-            var check = await Runtime.CheckForUpdatesAsync();
-            ControlPanelWindow.SetUpdateStatus(check.Message);
-            if (!check.UpdateAvailable)
+            if (ShowUpdateMessage(owner, UiText.Get("ForkUpdateThroughSetup"), MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
             {
-                ShowUpdateMessage(owner, check.Message, MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var prompt = UiText.Format("NewVersionPrompt", check.CurrentVersion, check.LatestVersion);
-            if (ShowUpdateMessage(owner, prompt, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-            {
-                ControlPanelWindow.SetUpdateStatus(UiText.Get("UpdateCancelled"));
-                return;
-            }
-
-            progressWindow = new UpdateProgressWindow(check.CurrentVersion, check.LatestVersion);
-            if (owner is { IsVisible: true })
-            {
-                progressWindow.Owner = owner;
-            }
-            else
-            {
-                progressWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            }
-            progressWindow.Show();
-            var progress = new Progress<UpdateProgress>(progressWindow.Report);
-
-            var output = await Runtime.RunUpdateAsync(progress);
-            await ControlPanelWindow.RefreshAsync();
-            var completedMessage = LastNonEmptyLine(output, UiText.Get("UpdateCompleted"));
-            progressWindow.Complete(completedMessage);
-            ControlPanelWindow.SetUpdateStatus(completedMessage);
-        }
-        catch (Exception ex)
-        {
-            var message = LastNonEmptyLine(ex.Message, UiText.Get("UpdateCheckFailed"));
-            ControlPanelWindow.SetUpdateStatus(message);
-            if (progressWindow is null)
-            {
-                ShowUpdateMessage(owner, message, MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            else
-            {
-                progressWindow.Fail(message);
+                try
+                {
+                    Process.Start(new ProcessStartInfo(ForkReleasesUrl) { UseShellExecute = true });
+                }
+                catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+                {
+                    ShowUpdateMessage(owner, UiText.Format("ForkReleasesOpenFailed", ForkReleasesUrl), MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
         }
         finally
         {
-            _updateInProgress = false;
-            ControlPanelWindow.SetUpdateState(false);
-            await RefreshTraySnapshotAsync();
+            _releasesPromptOpen = false;
         }
+        return Task.CompletedTask;
     }
 
     private static MessageBoxResult ShowUpdateMessage(

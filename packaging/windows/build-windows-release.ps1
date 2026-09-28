@@ -109,6 +109,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repository 'scripts\install\install.ps1') -Destination (Join-Path $releaseRoot 'install.ps1') -Force
     Write-Checksum (Join-Path $releaseRoot 'install.ps1')
     [ordered]@{
+        repository='eerraa/AgentDock-Workbench'; upstream_version='1.1.8'; upstream_commit='4bd778d4077bbe58cfe19e4abb777f660694377b'
         version=$version; channel=$(if($Candidate){'candidate-not-released'}else{'release'}); source_dirty=($sourceChanges.Count -gt 0); changed_paths=$sourceChanges; commit=$commit; build_date=$buildDate; platforms=@($Architectures | ForEach-Object {"windows/$_"})
         agentdock_authenticode=$(if($SignedBuild){'signed'}else{'unsigned'}); cloudflared_authenticode='valid'
         wsl_helpers='Windows feature payload only; no separate Linux release'

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"runtime"
 	"strings"
 	"testing"
@@ -49,8 +50,25 @@ func TestRunPrintsMachineReadableBuildInfo(t *testing.T) {
 
 func TestRunRejectsUnexpectedUpdateArguments(t *testing.T) {
 	err := run(context.Background(), []string{"update", "--check", "extra"}, &bytes.Buffer{}, &bytes.Buffer{})
-	if err == nil || !strings.Contains(err.Error(), "agentdock update [--check|--progress-json|--local-archive") {
+	if err == nil || !strings.Contains(err.Error(), "agentdock update --local-archive") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRunRefersOnlineUpdatesToForkSetup(t *testing.T) {
+	// A canceled context proves the refusal happens before any network or
+	// generation access: the online updater would report the cancellation.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, args := range [][]string{{"update"}, {"update", "--check"}, {"update", "--progress-json"}} {
+		stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
+		err := run(ctx, args, stdout, stderr)
+		if !errors.Is(err, errForkUpdateThroughSetup) || !strings.Contains(err.Error(), "https://github.com/eerraa/AgentDock-Workbench/releases") {
+			t.Fatalf("%v did not refer to the fork Setup: %v", args, err)
+		}
+		if stdout.Len() != 0 || stderr.Len() != 0 {
+			t.Fatalf("%v produced updater output: %q %q", args, stdout.String(), stderr.String())
+		}
 	}
 }
 
