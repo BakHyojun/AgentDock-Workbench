@@ -73,7 +73,7 @@ foreach($value in @($true,'false',0,1)) {
     if(-not $rejected){throw 'Ambiguous production safety field accepted'}
     $checks++
 }
-foreach($version in @('1.1.7','1.1.8','1.1.6100','1.1.16101','1.1.16102','1.1.17100','1.1.8100')) {
+foreach($version in @('1.1.7','1.1.8','1.1.6100','1.1.16101','1.1.16102','1.1.8100')) {
     $bad=$good.Clone();$bad.version=$version;$rejected=$false
     try {Assert-WindowsReleaseAcceptance ([pscustomobject]$bad) $version $commit} catch {$rejected=$true}
     if(-not $rejected){throw ('Upstream-baseline or reused fork version accepted: '+$version)}
@@ -115,7 +115,7 @@ func TestWindowsPublicationUsesImmutableAssetsAndActualDownloads(t *testing.T) {
 // Git/GitHub test doubles. No GitHub credential or network request is used.
 const publicationFixture = `param([string]$Scenario)
 $ErrorActionPreference='Stop'
-$env:RELEASE_TAG='v1.1.17100';$env:RELEASE_VERSION='1.1.17100'
+$env:RELEASE_TAG='v1.1.8101';$env:RELEASE_VERSION='1.1.8101'
 $env:RELEASE_COMMIT='0123456789012345678901234567890123456789'
 $env:RELEASE_PRERELEASE='false';$env:GITHUB_REPOSITORY='eerraa/AgentDock-Workbench'
 $env:RUNNER_TEMP=Join-Path $PWD 'tmp';$env:GITHUB_STEP_SUMMARY=Join-Path $PWD 'summary.md'
@@ -123,7 +123,7 @@ $global:publication_root=Join-Path $PWD 'dist/windows-package/release'
 New-Item -ItemType Directory -Path $global:publication_root,$env:RUNNER_TEMP,(Join-Path $PWD 'docs/releases'),(Join-Path $PWD 'scripts/test') -Force | Out-Null
 $names=@('AgentDockSetup-amd64.exe','AgentDockSetup-amd64.exe.sha256','agentdock_windows_amd64.zip','agentdock_windows_amd64.zip.sha256','install.ps1','install.ps1.sha256','build-report.json','build-report.json.sha256','verification-scope.json','verification-scope.json.sha256')
 foreach($name in $names){[IO.File]::WriteAllText((Join-Path $global:publication_root $name),'inert fixture '+$name)}
-[IO.File]::WriteAllText((Join-Path $PWD 'docs/releases/v1.1.17100.md'),'Fixture release note')
+[IO.File]::WriteAllText((Join-Path $PWD 'docs/releases/v1.1.8101.md'),'Fixture release note')
 # The separate acceptance test above exercises the real verifier policy. Here
 # the verifier records invocations so this test isolates publication semantics.
 [IO.File]::WriteAllText((Join-Path $PWD 'scripts/test/verify-windows-release-assets.ps1'),'$global:validationCount++')

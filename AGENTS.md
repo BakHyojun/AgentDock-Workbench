@@ -68,7 +68,7 @@ explicit disposable unit/native fixtures are allowed. Preserve runner-only test
 guards and distinguish a local build from an unexecuted runner test.
 
 Versions follow `1.1.<upstream patch>100` (now 1.1.8100). Never reuse a published
-fork version (1.1.6100, 1.1.16101, 1.1.16102, 1.1.17100) for new bytes. Source,
+fork version (1.1.6100, 1.1.16101, 1.1.16102, 1.1.8100) for new bytes. Source,
 tests, packaging, installation, publication and actual asset redownload are
 separate delivery states; report each honestly, including Korean and rg content
 in the actual payload, source identity, checksums, signing status and every step

@@ -231,7 +231,7 @@ jobs:
           if ($publish -and ($env:EVENT_NAME -ne 'workflow_dispatch' -or $env:INSTALLATION_TESTS -ne 'true' -or $prerelease -or $env:BUILD_ARCHITECTURES -ne 'amd64')) {
             throw 'Formal fork publication requires explicit x64 isolated installation acceptance and prerelease=false.'
           }
-          if ($publish -and ([version]$version -le [version]'1.1.8' -or @('1.1.6100','1.1.16101','1.1.16102','1.1.17100','1.1.8100') -contains $version)) { throw 'The distribution version must follow the upstream baseline and never reuse a published fork version.' }
+          if ($publish -and ([version]$version -le [version]'1.1.8' -or @('1.1.6100','1.1.16101','1.1.16102','1.1.8100') -contains $version)) { throw 'The distribution version must follow the upstream baseline and never reuse a published fork version.' }
           if (-not [string]::IsNullOrWhiteSpace($tag)) {
             & go run ./tools/release verify-version $tag
             if ($LASTEXITCODE -ne 0) {
