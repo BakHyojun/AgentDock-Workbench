@@ -5,9 +5,75 @@ package desktopruntime
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 )
+
+// A public probe that times out after an earlier success must leave pending
+// state, like a fast failure, so the next status read cannot report Ready.
+func TestFunnelTimeoutDoesNotResurrectReady(t *testing.T) {
+	// Status reads local health directly; serve it from a private loopback server.
+	health := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer health.Close()
+	parsed, err := url.Parse(health.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := strconv.Atoi(parsed.Port())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rt, system := newPublicAccessTestSystem(t, "none")
+	rt.manifest.Port = port
+	rt.manifest.LocalMCPURL = health.URL + "/mcp"
+	if err := Save(filepath.Join(rt.root, "runtime.json"), rt.manifest); err != nil {
+		t.Fatal(err)
+	}
+	if rt, err = loadTunnelRuntime(rt.root); err != nil {
+		t.Fatal(err)
+	}
+	if err := system.configure(rt, true); err != nil {
+		t.Fatal(err)
+	}
+	if rt, err = loadTunnelRuntime(rt.root); err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(rt.root, "tailscale.exe")
+	if before := inspectTailscaleRuntime(t.Context(), rt, binary, system.fake.client()); !before.Ready {
+		t.Fatalf("fixture not verified: %+v", before)
+	}
+	restarts, mapping := system.restarts, cloneTailscaleServe(system.fake.config)
+	hooks := system.hooks
+	hooks.verifyOrigin = func(ctx context.Context, _ tunnelRuntime, _ string) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	deadline, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
+	failed, err := verifyConfiguredTailscale(deadline, rt.root, hooks)
+	cancel()
+	if err != nil || failed.Ready || failed.DiagnosticCode != "public_unreachable" {
+		t.Fatalf("timeout result: %+v err=%v", failed, err)
+	}
+	state, err := loadTailscaleState(rt.root)
+	if err != nil || !state.Pending || state.VerifiedAt != nil {
+		t.Fatalf("timeout kept earlier verification: %+v %v", state, err)
+	}
+	if next := inspectTailscaleRuntime(t.Context(), rt, binary, system.fake.client()); next.Ready || next.DiagnosticCode != "verification_pending" {
+		t.Fatalf("timeout resurrected readiness: %+v", next)
+	}
+	if system.restarts != restarts || !sameTailscaleServe(mapping, system.fake.config) {
+		t.Fatal("verification changed lifecycle or mapping")
+	}
+	hooks.verifyOrigin = func(context.Context, tunnelRuntime, string) error { return nil }
+	if recovered, err := verifyConfiguredTailscale(t.Context(), rt.root, hooks); err != nil || !recovered.Ready {
+		t.Fatalf("successful reverification did not recover: %+v %v", recovered, err)
+	}
+}
 
 func TestFunnelLocalCommitRetainsPendingWithoutPublicWait(t *testing.T) {
 	runtime, system := newPublicAccessTestSystem(t, "none")

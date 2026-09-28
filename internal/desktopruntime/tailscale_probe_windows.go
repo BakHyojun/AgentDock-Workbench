@@ -78,28 +78,41 @@ func verifyConfiguredTailscale(ctx context.Context, root string, hooks publicAcc
 	status.Installed, status.Configured, status.Running, status.FunnelEnabled, status.LocalReady = true, true, true, true, true
 	status.PublicURL, status.DNSName, status.DeviceName, status.BackendState = state.PublicOrigin, node.DNSName, node.HostName, node.BackendState
 	status.Phase = "VerifyingPublic"
-	probeErr := hooks.verifyOrigin(ctx, runtime, state.PublicOrigin)
-	if ctx.Err() != nil {
-		return finish(errors.Join(probeErr, ctx.Err()))
-	}
 	// Use the same root-before-client lock order as configuration. Re-read all
 	// identities before persisting so stale probes cannot resurrect a stopped or
 	// replaced configuration.
-	commitErr := withTailscaleVerificationCommit(ctx, root, binary, func() error {
-		currentRuntime, err := loadTunnelRuntime(root)
-		if err != nil {
-			return err
-		}
-		current, err := loadTailscaleState(root)
-		if err != nil {
-			return err
-		}
-		if current == nil || !current.Enabled || currentRuntime.mode != "funnel" || !current.ConfiguredAt.Equal(state.ConfiguredAt) || current.DeviceID != state.DeviceID || current.PublicOrigin != state.PublicOrigin || current.LocalOrigin != state.LocalOrigin || currentRuntime.localOrigin() != state.LocalOrigin {
-			return tailscaleProblem("mode_changed", "配置已变化，旧公网验证结果已丢弃")
-		}
+	withCurrent := func(ctx context.Context, operation func(*tailscaleFunnelState) error) error {
+		return withTailscaleVerificationCommit(ctx, root, binary, func() error {
+			currentRuntime, err := loadTunnelRuntime(root)
+			if err != nil {
+				return err
+			}
+			current, err := loadTailscaleState(root)
+			if err != nil {
+				return err
+			}
+			if current == nil || !current.Enabled || currentRuntime.mode != "funnel" || !current.ConfiguredAt.Equal(state.ConfiguredAt) || current.DeviceID != state.DeviceID || current.PublicOrigin != state.PublicOrigin || current.LocalOrigin != state.LocalOrigin || currentRuntime.localOrigin() != state.LocalOrigin {
+				return tailscaleProblem("mode_changed", "配置已变化，旧公网验证结果已丢弃")
+			}
+			return operation(current)
+		})
+	}
+	markPending := func(current *tailscaleFunnelState) error {
+		current.Pending, current.VerifiedAt = true, nil
+		return hooks.saveState(root, current)
+	}
+	probeErr := hooks.verifyOrigin(ctx, runtime, state.PublicOrigin)
+	if ctx.Err() != nil {
+		// A timed-out or cancelled probe is no evidence of readiness. Record it
+		// like a fast failure so an earlier success cannot be reported as Ready
+		// again. The probe context is spent, so bound this write separately.
+		pendingCtx, cancelPending := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancelPending()
+		return finish(errors.Join(probeErr, ctx.Err(), withCurrent(pendingCtx, markPending)))
+	}
+	commitErr := withCurrent(ctx, func(current *tailscaleFunnelState) error {
 		if probeErr != nil {
-			current.Pending, current.VerifiedAt = true, nil
-			return hooks.saveState(root, current)
+			return markPending(current)
 		}
 		freshNode, freshConfig, err := client.observe(ctx)
 		if err != nil {
