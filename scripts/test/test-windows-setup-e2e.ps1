@@ -380,7 +380,7 @@ try {
         -ArgumentList @(
             '/VERYSILENT',
             '/SUPPRESSMSGBOXES',
-            '/LANG=chinesesimplified',
+            '/LANG=korean',
             '/NORESTART',
             "/DIR=$InstallRoot",
             "/LOG=$setupLogPath",
@@ -397,8 +397,8 @@ try {
         -LogPath $setupLogPath
     Write-Host 'AgentDock Setup installation exited successfully.'
     $initialLog = Get-Content -LiteralPath $setupLogPath -Raw
-    if ($initialLog -notmatch 'AgentDock active language: chinesesimplified') {
-        throw 'Setup did not use the Simplified Chinese messages.'
+    if ($initialLog -notmatch 'AgentDock active language: korean') {
+        throw 'Setup did not use the Korean messages.'
     }
     if ($initialLog -notmatch 'existing installation detected: source=powershell') {
         throw 'Setup did not recognize the legacy PowerShell installation.'
@@ -488,7 +488,7 @@ try {
         -ArgumentList @(
             '/VERYSILENT',
             '/SUPPRESSMSGBOXES',
-            '/LANG=chinesesimplified',
+            '/LANG=english',
             '/NORESTART',
             "/DIR=$InstallRoot",
             "/LOG=$repeatLogPath",
@@ -502,6 +502,9 @@ try {
         -Description 'AgentDock Setup repeated in-place upgrade' `
         -LogPath $repeatLogPath
     $repeatLog = Get-Content -LiteralPath $repeatLogPath -Raw
+    if ($repeatLog -notmatch 'AgentDock active language: english') {
+        throw 'Repeated Setup did not use the English messages.'
+    }
     if ($repeatLog -notmatch 'existing installation detected: source=setup') {
         throw 'Repeated Setup did not recognize the existing Setup-managed installation.'
     }
@@ -572,6 +575,9 @@ try {
         -Description 'AgentDock Setup repair' `
         -LogPath $repairLogPath
     $repairLog = Get-Content -LiteralPath $repairLogPath -Raw
+    if ($repairLog -notmatch 'AgentDock active language: chinesesimplified') {
+        throw 'Setup repair did not use the Simplified Chinese messages.'
+    }
     if ($repairLog -notmatch 'existing installation detected: source=setup') {
         throw 'Setup did not recognize the existing Setup-managed installation.'
     }

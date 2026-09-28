@@ -32,7 +32,7 @@ def main() -> None:
         assert re.search(rf'<key>{key}</key>\s*<string>{PRODUCT}</string>',mac), key
     assert 'BUNDLE_ID="com.uvwt.agentdock"' in mac
     assert 'APP_DIR="$OUTPUT_DIR/AgentDock.app"' in mac
-    for path in ['internal/httpx/status_page.html','internal/httpx/oauth_authorize_page.html']:
+    for path in ['internal/httpx/status_page.html','internal/httpx/oauth_authorize_text.go']:
         assert PRODUCT in text(path)
     for language in ['en','zh-Hans']:
         assert PRODUCT in text(f'desktop/macos/AgentDockApp/Resources/{language}.lproj/Localizable.strings')
