@@ -155,6 +155,63 @@ func applyBackupNativeMetadata(path string, metadata *backupNativeMetadata) (res
 	return windows.SetFileAttributes(name, attributes)
 }
 
+// assignableBackupNativeMetadata keeps a recorded owner this process may assign.
+// BackupWrite runs without privileges, so it can set only the token user or a
+// group the token may use as owner. A file written by an elevated AgentDock is
+// owned by BUILTIN\Administrators, which a standard installer cannot assign;
+// such a copy records the current user as owner. Group, DACL, control flags
+// and attributes are preserved unchanged, so access is the same.
+func assignableBackupNativeMetadata(metadata *backupNativeMetadata) (*backupNativeMetadata, error) {
+	if metadata == nil {
+		return nil, nil
+	}
+	token := windows.GetCurrentProcessToken()
+	user, err := token.GetTokenUser()
+	if err != nil {
+		return nil, err
+	}
+	groups, err := token.GetTokenGroups()
+	if err != nil {
+		return nil, err
+	}
+	return substituteUnassignableOwner(metadata, user.User.Sid, func(owner *windows.SID) bool {
+		for _, group := range groups.AllGroups() {
+			if group.Attributes&windows.SE_GROUP_OWNER != 0 && group.Sid.Equals(owner) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func substituteUnassignableOwner(metadata *backupNativeMetadata, user *windows.SID, ownerCapable func(*windows.SID) bool) (*backupNativeMetadata, error) {
+	security, err := windows.SecurityDescriptorFromString(metadata.Security)
+	if err != nil {
+		return nil, err
+	}
+	owner, _, err := security.Owner()
+	if err != nil {
+		return nil, err
+	}
+	if owner == nil || owner.Equals(user) || ownerCapable(owner) {
+		return metadata, nil
+	}
+	absolute, err := security.ToAbsolute()
+	if err != nil {
+		return nil, err
+	}
+	if err := absolute.SetOwner(user, false); err != nil {
+		return nil, err
+	}
+	relative, err := absolute.ToSelfRelative()
+	if err != nil {
+		return nil, err
+	}
+	substituted := *metadata
+	substituted.Security = relative.String()
+	return &substituted, nil
+}
+
 func backupNativeMetadataSize(value *backupNativeMetadata) int {
 	if value == nil {
 		return 0

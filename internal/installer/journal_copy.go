@@ -78,6 +78,13 @@ func copyBackupTree(ctx context.Context, source, destination string) (string, er
 		if err != nil {
 			return fmt.Errorf("backup metadata for %s: %w", path, err)
 		}
+		if destination != "" {
+			// A copy can carry only an owner this process may assign; the
+			// digest records what the copy actually preserves.
+			if native, err = assignableBackupNativeMetadata(native); err != nil {
+				return fmt.Errorf("backup metadata for %s: %w", path, err)
+			}
+		}
 		metadataBytes += backupNativeMetadataSize(native)
 		if metadataBytes > 32<<20 {
 			return errors.New("backup metadata budget exceeded")

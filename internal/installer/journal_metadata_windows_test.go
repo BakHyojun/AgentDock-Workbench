@@ -228,3 +228,40 @@ func TestWindowsBackupPreservesLegacyAndAutomaticInheritanceModes(t *testing.T) 
 		})
 	}
 }
+
+// A standard installer cannot assign BUILTIN\Administrators as owner; the copy
+// records the current user instead and keeps the group and DACL unchanged.
+func TestUnassignableBackupOwnerKeepsAccessControl(t *testing.T) {
+	user, err := windows.StringToSid("S-1-5-21-1000000000-2000000000-3000000000-1001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := &backupNativeMetadata{Security: "O:BAG:SYD:PAI(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;S-1-5-21-1000000000-2000000000-3000000000-1001)", Attributes: windows.FILE_ATTRIBUTE_ARCHIVE}
+	unassignable := func(*windows.SID) bool { return false }
+	substituted, err := substituteUnassignableOwner(original, user, unassignable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	security, err := windows.SecurityDescriptorFromString(substituted.Security)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, _, err := security.Owner()
+	if err != nil || !owner.Equals(user) {
+		t.Fatalf("unassignable owner was not replaced by the current user: %s %v", substituted.Security, err)
+	}
+	after := func(value string) string { return value[strings.Index(value, "G:"):] }
+	if after(substituted.Security) != after(original.Security) || substituted.Attributes != original.Attributes {
+		t.Fatalf("group, DACL or attributes changed: %s -> %s", original.Security, substituted.Security)
+	}
+	if original.Security[:4] != "O:BA" {
+		t.Fatal("original metadata was modified in place")
+	}
+	if kept, err := substituteUnassignableOwner(original, user, func(*windows.SID) bool { return true }); err != nil || kept.Security != original.Security {
+		t.Fatalf("owner-capable group owner changed: %v %v", kept, err)
+	}
+	self := &backupNativeMetadata{Security: "O:S-1-5-21-1000000000-2000000000-3000000000-1001G:SYD:PAI(A;;FA;;;SY)"}
+	if kept, err := substituteUnassignableOwner(self, user, unassignable); err != nil || kept.Security != self.Security {
+		t.Fatalf("current-user owner changed: %v %v", kept, err)
+	}
+}
