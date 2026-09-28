@@ -3,6 +3,7 @@ package scripts
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -32,6 +33,25 @@ func TestWindowsForkDistributionTargets(t *testing.T) {
 				t.Error("Windows fork can still resolve an upstream update payload")
 			}
 		})
+	}
+}
+
+// The published build report must name the baseline recorded in AGENTS.md.
+func TestWindowsBuildReportNamesTheSourceBaseline(t *testing.T) {
+	rules, err := os.ReadFile("../../AGENTS.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := regexp.MustCompile("source\\s+baseline\\s+is[^`]*`([0-9a-f]{40})`").FindSubmatch(rules)
+	if match == nil {
+		t.Fatal("AGENTS.md does not record a fixed source baseline commit")
+	}
+	script, err := os.ReadFile("../../packaging/windows/build-windows-release.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(script), "upstream_commit='"+string(match[1])+"'") {
+		t.Fatalf("build report does not name the AGENTS.md baseline %s", match[1])
 	}
 }
 

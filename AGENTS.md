@@ -40,14 +40,41 @@ changed behavior; do not remove tests or weaken assertions to obtain a green bui
 Use injected time for activity boundaries. Verify concurrent conversations, calls
 without tasks, old records, rejected writes and asynchronous command completion.
 
-Build the final Windows package with `.github/workflows/windows-package.yml` in
-`A-m-o-r-F-a-t-i/agentdock`. Source, tests, package construction, installation tests
-and publication are separate delivery states. Report unexecuted checks honestly.
+Fork state map: `docs/eerraa/fork-map.ko.md` (identity, fork delta owners and
+invariants, upstream merge checklist, verification commands, local build). Update
+it with every fork change; keep history in Git, not in documents. The source
+baseline is the Workbench v1.1.8 prerelease tag
+`4bd778d4077bbe58cfe19e4abb777f660694377b`. Keep only pinned rg, Korean
+presentation, the CUA desktop plugin (`plugins/cua-driver`) and
+reproducer-proven minimal fixes at the existing owners. Do not reintroduce
+composite hosts, Origin pipes, epochs or parallel state systems.
 
-Implementation map: `docs/implementation-1.1.5.md`.
+This fork is updated only by running a new Setup. The tray/window update entry
+opens the fork Releases page, and `agentdock update` refuses online checks and
+downloads; only the maintenance `--local-archive` path remains. Do not re-enable
+the online updater or publish updater archives as a user update path.
 
-For the 1.1.5 delivery, run static and isolated automated regression only. Do not
-launch the desktop app or Setup, install/uninstall/upgrade/rollback, or change the
-production Core. Dispatch windows-package.yml with installation_tests=false.
-Keep the 120s activity, 180s request eligibility and 300s next-call insertion
-expiry independent. Manual desktop and installation checks remain not run.
+Work on a `fix|feat|docs/<topic>` branch in the main working tree, verify, then
+fast-forward or merge main and push only to origin (`eerraa/AgentDock-Workbench`).
+Never push upstream, force push, rewrite shared history, move public tags,
+overwrite released bytes or change open PR heads. Build or publish a release only
+when the user asks, from a clean clone as described in the map.
+
+Never run Setup or install/upgrade/uninstall/recover the operational PC. Never
+replace/restart production Core or change production Cloudflare/Tailscale or
+credentials. Real installer acceptance requires a genuine isolated Windows runner
+or disposable VM; do not impersonate one through environment variables. Local
+explicit disposable unit/native fixtures are allowed. Preserve runner-only test
+guards and distinguish a local build from an unexecuted runner test.
+
+Versions follow `1.1.<upstream patch>100` (now 1.1.8100). Never reuse a published
+fork version (1.1.6100, 1.1.16101, 1.1.16102, 1.1.17100) for new bytes. Source,
+tests, packaging, installation, publication and actual asset redownload are
+separate delivery states; report each honestly, including Korean and rg content
+in the actual payload, source identity, checksums, signing status and every step
+that was not run.
+
+Preserve failed tests and blocked-request messages. Do not retry an explicit safety or
+permission denial through another tool, encoding or argument decomposition; only
+independent permitted work may continue.
+Keep the 120s activity, 180s request eligibility and 300s insertion expiry separate.
