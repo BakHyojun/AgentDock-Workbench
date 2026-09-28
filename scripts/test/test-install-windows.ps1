@@ -685,4 +685,6 @@ foreach ($required in @(
     }
 }
 
+& (Join-Path $PSScriptRoot 'test-windows-installer-task-ownership.ps1') -InstallerPath $resolvedInstaller
+
 if ($StaticOnly) { Write-Host 'Windows installer static contract passed; runtime probes were not executed.' } else { Write-Host 'Windows installer validation passed.' }

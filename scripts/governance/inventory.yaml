@@ -318,6 +318,12 @@ scripts:
     public_contract: false
     deletable: false
 
+  - path: scripts/test/test-windows-installer-task-ownership.ps1
+    class: test
+    owner: installer
+    public_contract: false
+    deletable: false
+
   - path: scripts/test/test-windows-setup-e2e.ps1
     class: test
     owner: installer

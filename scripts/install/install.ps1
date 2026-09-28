@@ -2517,7 +2517,8 @@ exit `$LASTEXITCODE
         if ($cloudflaredStopAttempted -or $cloudflaredReplacementStarted -or $tunnelStartupRegistrationChanged) {
             [void] (Stop-CloudflaredForUpgrade -BinaryPath $cloudflaredBinary)
         }
-        if ($effectivePrivilegeMode -eq 'elevated') {
+        # Preflight rejection and a RunAs request that never started own no task mutation.
+        if ($effectivePrivilegeMode -eq 'elevated' -and $taskTransactionStarted) {
             Stop-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction SilentlyContinue
             Start-Sleep -Milliseconds 500
         }
@@ -2590,6 +2591,7 @@ exit `$LASTEXITCODE
                     -BackupDirectory $taskBackupDirectory `
                     -AdminLauncherPath $sourceTrayBinary `
                     -LauncherPath '' `
+                    -RuntimeRoot $runtimeDir `
                     -TaskUser $taskUser
                 if (-not $restoreTaskActionResult.Started) {
                     throw "Administrator approval for AgentDock rollback was not completed: $($restoreTaskActionResult.ErrorMessage)"
