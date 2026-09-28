@@ -392,9 +392,82 @@ func dynamicMCPToolEnvelope(structured any) map[string]any {
 	}
 	return map[string]any{
 		"isError":           isError,
-		"structuredContent": payload,
+		"structuredContent": withoutDuplicatedBinary(payload),
 		"content":           content,
 	}
+}
+
+// Upstream binary content (screenshots, audio, embedded blobs) is returned once,
+// in content. structuredContent keeps its type, MIME type and size so the model
+// still sees what was produced without receiving the same base64 twice.
+func withoutDuplicatedBinary(payload map[string]any) map[string]any {
+	remote, ok := payload["result"].(map[string]any)
+	if !ok {
+		return payload
+	}
+	var items []any
+	switch typed := remote["content"].(type) {
+	case []any:
+		items = typed
+	case []map[string]any:
+		items = make([]any, len(typed))
+		for index, item := range typed {
+			items[index] = item
+		}
+	default:
+		return payload
+	}
+	clean := make([]any, len(items))
+	changed := false
+	for index, item := range items {
+		stripped, ok := withoutBinaryData(item)
+		clean[index] = stripped
+		changed = changed || ok
+	}
+	if !changed {
+		return payload
+	}
+	cleanRemote := maps.Clone(remote)
+	cleanRemote["content"] = clean
+	cleanPayload := maps.Clone(payload)
+	cleanPayload["result"] = cleanRemote
+	return cleanPayload
+}
+
+func withoutBinaryData(item any) (any, bool) {
+	entry, ok := item.(map[string]any)
+	if !ok {
+		return item, false
+	}
+	switch entry["type"] {
+	case "image", "audio":
+		data, ok := entry["data"].(string)
+		if !ok {
+			return item, false
+		}
+		clean := maps.Clone(entry)
+		delete(clean, "data")
+		clean["base64_length"] = len(data)
+		clean["omitted"] = "returned once in MCP content"
+		return clean, true
+	case "resource":
+		resource, ok := entry["resource"].(map[string]any)
+		if !ok {
+			return item, false
+		}
+		blob, ok := resource["blob"].(string)
+		if !ok {
+			return item, false
+		}
+		cleanResource := maps.Clone(resource)
+		delete(cleanResource, "blob")
+		cleanResource["base64_length"] = len(blob)
+		cleanResource["omitted"] = "returned once in MCP content"
+		clean := maps.Clone(entry)
+		clean["resource"] = cleanResource
+		return clean, true
+	}
+	return item, false
 }
 
 func cloneWithoutInternalImage(value map[string]any) map[string]any {

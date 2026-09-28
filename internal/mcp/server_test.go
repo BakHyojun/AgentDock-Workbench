@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -170,6 +171,50 @@ func TestToolEnvelopePassesThroughDynamicMCPContent(t *testing.T) {
 	structured, _ := response["structuredContent"].(map[string]any)
 	if structured["name"] != "figma:get_screenshot" {
 		t.Fatalf("structuredContent = %#v", structured)
+	}
+	// The screenshot is delivered once, in content; structuredContent keeps
+	// only its description and the upstream structured result.
+	encoded, err := json.Marshal(structured)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "abc123") {
+		t.Fatalf("structuredContent duplicated binary content: %s", encoded)
+	}
+	remote, _ := structured["result"].(map[string]any)
+	described, _ := remote["content"].([]any)
+	if len(described) != 2 || remote["structuredContent"] == nil {
+		t.Fatalf("structured upstream result lost: %#v", remote)
+	}
+	omitted, _ := described[1].(map[string]any)
+	if omitted["type"] != "image" || omitted["mimeType"] != "image/png" || omitted["base64_length"] != 6 {
+		t.Fatalf("image description lost: %#v", omitted)
+	}
+	if text, _ := described[0].(map[string]any); text["text"] != "done" {
+		t.Fatalf("text content changed: %#v", text)
+	}
+}
+
+func TestToolEnvelopeOmitsDuplicatedDynamicMCPBlobs(t *testing.T) {
+	response := toolEnvelope("mcp_tool_call", map[string]any{
+		"name": "recorder:capture",
+		"result": map[string]any{
+			"content": []map[string]any{
+				{"type": "audio", "data": "audio-bytes", "mimeType": "audio/wav"},
+				{"type": "resource", "resource": map[string]any{"uri": "file:///clip.bin", "blob": "blob-bytes", "mimeType": "application/octet-stream"}},
+			},
+		},
+	}, nil)
+	encoded, err := json.Marshal(response["structuredContent"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "audio-bytes") || strings.Contains(string(encoded), "blob-bytes") || !strings.Contains(string(encoded), "file:///clip.bin") {
+		t.Fatalf("structuredContent binary handling = %s", encoded)
+	}
+	content, _ := response["content"].([]map[string]any)
+	if len(content) != 2 || content[0]["data"] != "audio-bytes" {
+		t.Fatalf("binary content was not delivered once: %#v", response["content"])
 	}
 }
 
