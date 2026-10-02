@@ -134,7 +134,7 @@ internal static class ExecutionDialogs
         };
         ui.Actions.Children.Add(cancel); ui.Actions.Children.Add(save); ui.Window.ShowDialog(); return result;
     }
-    internal static bool Preferences(Window owner, ExecutionPreferences preferences, McpUiPreference display, Func<ToolOutputSettings, Task> saveOutput)
+    internal static bool Preferences(Window owner, ExecutionPreferences preferences, McpUiPreference display, Func<ToolOutputSettings, bool, Task> saveOutput)
     {
         var ui = Create(owner, UiText.Get("ExecutionDisplayRetentionTitle"), 560, 620); var panel = new StackPanel(); ui.Root.Children.Add(new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
         var outputEnabled = new CheckBox { Content = UiText.Get("ExecutionOutputLimitEnabled"), IsChecked = display.ToolOutput.Enabled, Margin = new Thickness(0, 6, 0, 4) };
@@ -144,6 +144,9 @@ internal static class ExecutionDialogs
         AutomationProperties.SetAutomationId(outputChars, "ToolOutputMaxChars"); panel.Children.Add(outputChars);
         panel.Children.Add(Label(UiText.Get("ExecutionOutputLimitHelp")));
         outputChars.ToolTip = UiText.Get("ExecutionOutputLimitUnits");
+        var fullPayloadDebug = new CheckBox { Content = UiText.Get("ExecutionActivityFullPayloadDebug"), IsChecked = display.ActivityFullPayloadDebug, Margin = new Thickness(0, 12, 0, 4) };
+        AutomationProperties.SetAutomationId(fullPayloadDebug, "ActivityFullPayloadDebug"); panel.Children.Add(fullPayloadDebug);
+        panel.Children.Add(Label(UiText.Get("ExecutionActivityFullPayloadDebugHelp")));
         if (display.Warning.Length > 0) panel.Children.Add(Label(display.Warning));
         panel.Children.Add(Label(UiText.Get("ExecutionRetentionExplanation")));
         var days = new TextBox { Text = preferences.RetentionDays.ToString(), MinHeight = 34, Padding = new Thickness(6) }; panel.Children.Add(days);
@@ -161,7 +164,7 @@ internal static class ExecutionDialogs
             saving = true; save.IsEnabled = false; panel.IsEnabled = false; error.Text = "";
             try
             {
-                await saveOutput(output);
+                await saveOutput(output, fullPayloadDebug.IsChecked == true);
                 preferences.RetentionDays = count; preferences.FontSize = selectedFont; preferences.Notifications = selectedNotify;
                 saved = true;
             }

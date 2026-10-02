@@ -3262,4 +3262,8 @@
   <data name="SidebarMoreIsolated" xml:space="preserve"><value>另有 {0} 个项目响应被隔离。</value></data>
   <data name="ForkUpdateThroughSetup" xml:space="preserve"><value>此版本不在应用内更新。请从 Releases 页面下载并运行新的 Setup。是否现在打开 Releases 页面？</value></data>
   <data name="ForkReleasesOpenFailed" xml:space="preserve"><value>无法打开浏览器。请手动访问：{0}</value></data>
+  <data name="ExecutionPayloadPreviewOnly" xml:space="preserve"><value>仅保留预览</value></data>
+  <data name="ExecutionPayloadPreviewOnlyReason" xml:space="preserve"><value>普通模式仅保留超过 256 KiB 的活动数据预览。</value></data>
+  <data name="ExecutionActivityFullPayloadDebug" xml:space="preserve"><value>保留完整活动数据以供调试</value></data>
+  <data name="ExecutionActivityFullPayloadDebugHelp" xml:space="preserve"><value>普通模式仅为超过 256 KiB 的数据保留 2 KiB 预览。启用调试后，在现有存储上限内保留完整数据。工具响应和继续读取不受影响。</value></data>
 </root>

@@ -3262,4 +3262,8 @@ Shortcuts: Ctrl+F searches conversations, F5 refreshes, Esc closes details, and 
   <data name="SidebarMoreIsolated" xml:space="preserve"><value>{0} more project responses were isolated.</value></data>
   <data name="ForkUpdateThroughSetup" xml:space="preserve"><value>This build is not updated from inside the app. Download and run the new Setup from the Releases page. Open the Releases page now?</value></data>
   <data name="ForkReleasesOpenFailed" xml:space="preserve"><value>The browser could not be opened. Open this page manually: {0}</value></data>
+  <data name="ExecutionPayloadPreviewOnly" xml:space="preserve"><value>Preview only</value></data>
+  <data name="ExecutionPayloadPreviewOnlyReason" xml:space="preserve"><value>Normal mode retains only a preview of Activity payloads over 256 KiB.</value></data>
+  <data name="ExecutionActivityFullPayloadDebug" xml:space="preserve"><value>Save full Activity payloads for debugging</value></data>
+  <data name="ExecutionActivityFullPayloadDebugHelp" xml:space="preserve"><value>Normally, payloads over 256 KiB retain only a 2 KiB preview. Debugging saves full payloads within existing limits. Tool responses and continuation reads are unaffected.</value></data>
 </root>

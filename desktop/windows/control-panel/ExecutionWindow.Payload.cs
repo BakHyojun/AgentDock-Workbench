@@ -15,11 +15,11 @@ public partial class ExecutionWindow
         var service = new DisplayPreferenceService(_runtime);
         var display = await service.ReadAsync(_lifetime.Token);
         _outputPreference = display;
-        if (!ExecutionDialogs.Preferences(this, _preferences, display, async output =>
+        if (!ExecutionDialogs.Preferences(this, _preferences, display, async (output, fullPayloadDebug) =>
         {
             using var save = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
             save.CancelAfter(TimeSpan.FromSeconds(12));
-            _outputPreference = await service.SaveOutputAsync(output, display.Revision, save.Token);
+            _outputPreference = await service.SaveOutputAsync(output, fullPayloadDebug, display.Revision, save.Token);
         })) return;
         FontSize = _preferences.FontSize; SavePreferences();
         if (_detailCall is { } row)

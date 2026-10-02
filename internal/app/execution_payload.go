@@ -8,10 +8,10 @@ import (
 	"github.com/uvwt/agentdock/internal/activity"
 )
 
-func (r *Runtime) recordExecutionPayload(binding activity.Binding, name, kind string, value any, redactor activity.Redactor) {
+func (r *Runtime) recordExecutionPayload(binding activity.Binding, name, kind string, value any, redactor activity.Redactor, fullDebug bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	event, ok := r.executionPayloadEvent(ctx, binding, name, kind, value, redactor)
+	event, ok := r.executionPayloadEvent(ctx, binding, name, kind, value, redactor, fullDebug)
 	if !ok {
 		return
 	}
@@ -20,11 +20,11 @@ func (r *Runtime) recordExecutionPayload(binding activity.Binding, name, kind st
 	}
 }
 
-func (r *Runtime) executionPayloadEvent(ctx context.Context, binding activity.Binding, name, kind string, value any, redactor activity.Redactor) (activity.Event, bool) {
+func (r *Runtime) executionPayloadEvent(ctx context.Context, binding activity.Binding, name, kind string, value any, redactor activity.Redactor, fullDebug bool) (activity.Event, bool) {
 	if r.activity == nil || binding.CallID == "" || binding.ParentCallID != "" || binding.Visibility == "diagnostic" {
 		return activity.Event{}, false
 	}
-	payload := r.activity.CapturePayload(ctx, value, "complete", redactor)
+	payload := r.activity.CaptureHistoryPayload(ctx, value, "complete", redactor, fullDebug)
 	event := activity.Event{Binding: binding, Kind: "call.payload", ToolName: name}
 	if kind == "request" {
 		event.Request = payload
@@ -34,7 +34,7 @@ func (r *Runtime) executionPayloadEvent(ctx context.Context, binding activity.Bi
 	return event, true
 }
 
-func bindResponseAudit(ctx context.Context, binding activity.Binding, name string, redactor activity.Redactor, received time.Time, status string) bool {
+func bindResponseAudit(ctx context.Context, binding activity.Binding, name string, redactor activity.Redactor, received time.Time, status string, fullDebug bool) bool {
 	response, _ := ctx.Value(toolResponseKey{}).(*ToolResponse)
 	if response == nil || binding.ParentCallID != "" {
 		return false
@@ -43,6 +43,7 @@ func bindResponseAudit(ctx context.Context, binding activity.Binding, name strin
 	defer response.mu.Unlock()
 	response.auditBinding, response.auditName, response.auditRedactor = binding, name, redactor
 	response.auditReceived, response.auditStatus = received, status
+	response.auditFullPayloadDebug = fullDebug
 	return true
 }
 
@@ -64,8 +65,9 @@ func (r *Runtime) RecordToolResponse(response *ToolResponse, envelope any) {
 		redactor = redactor.WithSecrets(message.ReceiptToken)
 	}
 	received, status := response.auditReceived, response.auditStatus
+	fullDebug := response.auditFullPayloadDebug
 	response.mu.Unlock()
-	r.recordExecutionPayload(binding, name, "response", envelope, redactor)
+	r.recordExecutionPayload(binding, name, "response", envelope, redactor, fullDebug)
 	// This server-side boundary includes final-envelope serialization and
 	// observation storage. It does not invent downstream network delivery time.
 	if !received.IsZero() {

@@ -37,11 +37,14 @@ type preparedExecution struct {
 	sessionIDs          []string
 	mcpTarget           string
 	outputPolicy        config.ToolOutputSettings
+	fullPayloadDebug    bool
 	completion          *activity.AppendReservation
 }
 
 func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[string]any) (result Result, returnErr error) {
-	outputPolicy := r.MCPPresentationSettings().ToolOutput
+	settings := r.MCPPresentationSettings()
+	outputPolicy := settings.ToolOutput
+	fullPayloadDebug := settings.ActivityFullPayloadDebug
 	received := time.Now()
 	callID, err := activity.NewExecutionID("call_")
 	if err != nil {
@@ -69,7 +72,7 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 	initialEvents := []activity.Event{created}
 	if resolveErr == nil {
 		payloadCtx, payloadCancel := context.WithTimeout(context.Background(), 2*time.Second)
-		if payloadEvent, ok := r.executionPayloadEvent(payloadCtx, initial, spec.Name, "request", original, r.executionRedactor(original)); ok {
+		if payloadEvent, ok := r.executionPayloadEvent(payloadCtx, initial, spec.Name, "request", original, r.executionRedactor(original), fullPayloadDebug); ok {
 			initialEvents = append(initialEvents, payloadEvent)
 		}
 		payloadCancel()
@@ -96,12 +99,12 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 		// SDK and Bridge adapters persist the final envelope once, after adding the
 		// service catalog and trusted user insertions. Direct Runtime callers have
 		// no adapter and retain their actual returned result here.
-		if !bindResponseAudit(ctx, binding, spec.Name, redactor, received, rpcReturnStatus(result, returnErr)) {
+		if !bindResponseAudit(ctx, binding, spec.Name, redactor, received, rpcReturnStatus(result, returnErr), fullPayloadDebug) {
 			value := map[string]any{"result": result, "isError": returnErr != nil || resultReportsFailure(result)}
 			if returnErr != nil {
 				value["error"] = returnErr.Error()
 			}
-			r.recordExecutionPayload(binding, spec.Name, "response", value, redactor)
+			r.recordExecutionPayload(binding, spec.Name, "response", value, redactor, fullPayloadDebug)
 			if auditErr := r.recordRPCReturn(binding, spec.Name, received, result, returnErr); auditErr != nil {
 				if returnErr != nil {
 					returnErr = errors.Join(returnErr, fmt.Errorf("RPC audit persistence failed; verify side effects before retrying: %w", auditErr))
@@ -221,7 +224,7 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 	if local, _ := ctx.Value(localUserActionKey{}).(bool); local && decision.Effect == permission.Ask {
 		decision.Effect, decision.RuleID, decision.Reason = permission.Allow, "local-user-action", "已认证本地控制面板明确发起的固定管理操作。"
 	}
-	prepared := &preparedExecution{spec: spec, args: args, state: state, source: activity.SourceFromContext(ctx), decision: decision, outputPolicy: outputPolicy}
+	prepared := &preparedExecution{spec: spec, args: args, state: state, source: activity.SourceFromContext(ctx), decision: decision, outputPolicy: outputPolicy, fullPayloadDebug: fullPayloadDebug}
 	if decision.Effect == permission.Deny {
 		r.executionMu.Unlock()
 		return fail(toolErrorDetails("PERMISSION_DENIED", decision.Reason, "permission", map[string]any{"rule_id": decision.RuleID, "mode": decision.Mode, "permission": decision, "executed": false}))
@@ -561,7 +564,7 @@ func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (re
 			if returnErr != nil {
 				value["error"] = returnErr.Error()
 			}
-			r.recordExecutionPayload(p.state.binding, p.spec.Name, "response", value, r.executionRedactor(p.args))
+			r.recordExecutionPayload(p.state.binding, p.spec.Name, "response", value, r.executionRedactor(p.args), p.fullPayloadDebug)
 		}
 	}()
 	defer func() {

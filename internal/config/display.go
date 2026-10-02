@@ -18,19 +18,21 @@ import (
 var ErrDisplayRevision = errors.New("display settings changed; refresh before saving")
 
 type DisplaySettings struct {
-	SchemaVersion       int                `json:"schema_version"`
-	Revision            uint64             `json:"revision"`
-	ChatGPTMCPUIEnabled bool               `json:"chatgpt_mcp_ui_enabled"`
-	ToolOutput          ToolOutputSettings `json:"tool_output"`
-	Warning             string             `json:"warning,omitempty"`
-	WarningCode         string             `json:"warning_code,omitempty"`
-	WarningDetail       string             `json:"warning_detail,omitempty"`
+	SchemaVersion            int                `json:"schema_version"`
+	Revision                 uint64             `json:"revision"`
+	ChatGPTMCPUIEnabled      bool               `json:"chatgpt_mcp_ui_enabled"`
+	ToolOutput               ToolOutputSettings `json:"tool_output"`
+	ActivityFullPayloadDebug bool               `json:"activity_full_payload_debug,omitempty"`
+	Warning                  string             `json:"warning,omitempty"`
+	WarningCode              string             `json:"warning_code,omitempty"`
+	WarningDetail            string             `json:"warning_detail,omitempty"`
 }
 
 type DisplayChange struct {
-	ExpectedRevision    uint64              `json:"expected_revision"`
-	ChatGPTMCPUIEnabled *bool               `json:"chatgpt_mcp_ui_enabled"`
-	ToolOutput          *ToolOutputSettings `json:"tool_output,omitempty"`
+	ExpectedRevision         uint64              `json:"expected_revision"`
+	ChatGPTMCPUIEnabled      *bool               `json:"chatgpt_mcp_ui_enabled"`
+	ToolOutput               *ToolOutputSettings `json:"tool_output,omitempty"`
+	ActivityFullPayloadDebug *bool               `json:"activity_full_payload_debug,omitempty"`
 }
 
 // DisplayPreferences publishes immutable snapshots. Cosmetic writes never
@@ -56,10 +58,11 @@ func NewDisplayPreferences(home string, legacyEnabled bool) *DisplayPreferences 
 		}
 		if err == nil {
 			var disk struct {
-				SchemaVersion int             `json:"schema_version"`
-				Revision      uint64          `json:"revision"`
-				Enabled       *bool           `json:"chatgpt_mcp_ui_enabled"`
-				ToolOutput    json.RawMessage `json:"tool_output,omitempty"`
+				SchemaVersion            int             `json:"schema_version"`
+				Revision                 uint64          `json:"revision"`
+				Enabled                  *bool           `json:"chatgpt_mcp_ui_enabled"`
+				ToolOutput               json.RawMessage `json:"tool_output,omitempty"`
+				ActivityFullPayloadDebug json.RawMessage `json:"activity_full_payload_debug,omitempty"`
 			}
 			decoder := json.NewDecoder(bytes.NewReader(data))
 			decoder.DisallowUnknownFields()
@@ -70,6 +73,13 @@ func NewDisplayPreferences(home string, legacyEnabled bool) *DisplayPreferences 
 			}
 			if err == nil && (disk.SchemaVersion != 1 && disk.SchemaVersion != 2 || disk.Revision == 0 || disk.Enabled == nil) {
 				err = errors.New("invalid display settings schema")
+			}
+			if err == nil && len(disk.ActivityFullPayloadDebug) > 0 {
+				if bytes.Equal(bytes.TrimSpace(disk.ActivityFullPayloadDebug), []byte("null")) {
+					err = errors.New("activity_full_payload_debug must be a boolean")
+				} else {
+					err = json.Unmarshal(disk.ActivityFullPayloadDebug, &settings.ActivityFullPayloadDebug)
+				}
 			}
 			if err == nil {
 				settings.Revision, settings.ChatGPTMCPUIEnabled = disk.Revision, *disk.Enabled
@@ -89,6 +99,7 @@ func NewDisplayPreferences(home string, legacyEnabled bool) *DisplayPreferences 
 		// Preserve corrupt preferences and suppress only optional UI. Core tool
 		// execution must remain available so the user can repair the file.
 		store.loadError = err
+		settings.ActivityFullPayloadDebug = false
 		settings.ChatGPTMCPUIEnabled = false
 		settings.Warning = "Display preferences could not be loaded; the original file was preserved. " + err.Error()
 		settings.WarningCode = "display_preferences_load_failed"
@@ -119,7 +130,7 @@ func (s *DisplayPreferences) Update(ctx context.Context, change DisplayChange) (
 	if s.loadError != nil {
 		return fail(fmt.Errorf("original display settings require repair: %w", s.loadError))
 	}
-	if change.ChatGPTMCPUIEnabled == nil && change.ToolOutput == nil {
+	if change.ChatGPTMCPUIEnabled == nil && change.ToolOutput == nil && change.ActivityFullPayloadDebug == nil {
 		return fail(errors.New("a display setting is required"))
 	}
 	if change.ExpectedRevision != current.Revision {
@@ -135,7 +146,10 @@ func (s *DisplayPreferences) Update(ctx context.Context, change DisplayChange) (
 		}
 		next.ToolOutput = *change.ToolOutput
 	}
-	if s.persisted && current.Warning == "" && current.ChatGPTMCPUIEnabled == next.ChatGPTMCPUIEnabled && current.ToolOutput == next.ToolOutput {
+	if change.ActivityFullPayloadDebug != nil {
+		next.ActivityFullPayloadDebug = *change.ActivityFullPayloadDebug
+	}
+	if s.persisted && current.Warning == "" && current.ChatGPTMCPUIEnabled == next.ChatGPTMCPUIEnabled && current.ToolOutput == next.ToolOutput && current.ActivityFullPayloadDebug == next.ActivityFullPayloadDebug {
 		s.mu.Unlock()
 		return current, nil
 	}

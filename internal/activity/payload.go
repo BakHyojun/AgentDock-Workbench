@@ -23,6 +23,10 @@ import (
 const MaxPayloadBytes = 16 << 20
 const MaxPayloadStorageBytes = 256 << 20
 const PayloadPreviewBytes = 2048
+
+// MaxHistoryFullPayloadBytes bounds optional Activity detail in normal mode.
+// Continuation sources keep their separate full-capture contract.
+const MaxHistoryFullPayloadBytes = 256 << 10
 const payloadPublicationGrace = 5 * time.Minute
 const payloadPublicationSafety = time.Minute
 
@@ -65,6 +69,16 @@ func (payload *Payload) clone(preview bool) *Payload {
 // CapturePayload applies the same credential policy before disk, previews and
 // copyable text. Storage failures cannot re-run or change the business outcome.
 func (s *Store) CapturePayload(ctx context.Context, value any, state string, redactor Redactor) *Payload {
+	return s.capturePayload(ctx, value, state, redactor, true)
+}
+
+// CaptureHistoryPayload preserves previews of large redacted results without
+// consuming blob quota. Full debugging capture still obeys all safety limits.
+func (s *Store) CaptureHistoryPayload(ctx context.Context, value any, state string, redactor Redactor, fullDebug bool) *Payload {
+	return s.capturePayload(ctx, value, state, redactor, fullDebug)
+}
+
+func (s *Store) capturePayload(ctx context.Context, value any, state string, redactor Redactor, full bool) *Payload {
 	result := &Payload{State: state, Format: "json"}
 	failure := func(reason string) *Payload {
 		result.State = "not_stored"
@@ -99,6 +113,14 @@ func (s *Store) CapturePayload(ctx context.Context, value any, state string, red
 	result.Lines = strings.Count(string(data), "\n") + 1
 	result.Preview = textutil.SafeTruncateString(string(data), PayloadPreviewBytes).Text
 	result.Truncated = len(result.Preview) < len(data)
+	if err := ctx.Err(); err != nil {
+		return failure("保存时已取消；原工具状态保持不变。")
+	}
+	if !full && len(data) > MaxHistoryFullPayloadBytes {
+		result.State = "preview_only"
+		result.Reason = "Normal-mode Activity history retains only a preview for payloads over 256 KiB."
+		return result
+	}
 	if s == nil || s.root == "" {
 		return failure("当前活动日志没有可持久化的存储目录。")
 	}

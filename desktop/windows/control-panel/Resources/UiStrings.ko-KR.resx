@@ -3262,4 +3262,8 @@
   <data name="SidebarMoreIsolated" xml:space="preserve"><value>프로젝트 응답 {0}개가 추가로 격리되었습니다.</value></data>
   <data name="ForkUpdateThroughSetup" xml:space="preserve"><value>이 배포판은 앱 안에서 업데이트하지 않습니다. Releases 페이지에서 새 Setup을 내려받아 실행하세요. 지금 Releases 페이지를 열까요?</value></data>
   <data name="ForkReleasesOpenFailed" xml:space="preserve"><value>브라우저를 열 수 없습니다. 다음 주소를 직접 여세요: {0}</value></data>
+  <data name="ExecutionPayloadPreviewOnly" xml:space="preserve"><value>프리뷰만 보존</value></data>
+  <data name="ExecutionPayloadPreviewOnlyReason" xml:space="preserve"><value>일반 모드에서는 256 KiB를 넘는 Activity 데이터의 프리뷰만 보존합니다.</value></data>
+  <data name="ExecutionActivityFullPayloadDebug" xml:space="preserve"><value>디버깅용 Activity 전체 데이터 보존</value></data>
+  <data name="ExecutionActivityFullPayloadDebugHelp" xml:space="preserve"><value>일반 모드에서는 256 KiB를 넘는 데이터의 2 KiB 프리뷰만 보존합니다. 디버깅을 켜면 기존 저장 한도 안에서 전체 데이터를 보존합니다. 도구 응답과 이어읽기에는 영향이 없습니다.</value></data>
 </root>

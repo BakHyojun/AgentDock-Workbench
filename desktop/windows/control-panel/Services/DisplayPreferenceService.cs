@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AgentDock.ControlPanel;
 
-internal sealed record McpUiPreference(bool Enabled, long Revision, string Warning, string RefreshHint, ToolOutputSettings ToolOutput);
+internal sealed record McpUiPreference(bool Enabled, long Revision, string Warning, string RefreshHint, ToolOutputSettings ToolOutput, bool ActivityFullPayloadDebug = false);
 
 internal sealed class DisplayPreferenceService(RuntimeService runtime)
 {
@@ -18,11 +18,11 @@ internal sealed class DisplayPreferenceService(RuntimeService runtime)
         return Parse(await client.ExecutionPostAsync("/internal/runtime/execution/display", new { chatgpt_mcp_ui_enabled = enabled, expected_revision = revision }, token).ConfigureAwait(false));
     }
 
-    internal async Task<McpUiPreference> SaveOutputAsync(ToolOutputSettings output, long revision, CancellationToken token)
+    internal async Task<McpUiPreference> SaveOutputAsync(ToolOutputSettings output, bool fullPayloadDebug, long revision, CancellationToken token)
     {
         if (!output.Valid) throw new ArgumentOutOfRangeException(nameof(output));
         using var client = new ActivityClient(runtime);
-        return Parse(await client.ExecutionPostAsync("/internal/runtime/execution/display", new { tool_output = output, expected_revision = revision }, token).ConfigureAwait(false));
+        return Parse(await client.ExecutionPostAsync("/internal/runtime/execution/display", new { tool_output = output, activity_full_payload_debug = fullPayloadDebug, expected_revision = revision }, token).ConfigureAwait(false));
     }
 
     private static McpUiPreference Parse(JsonElement value)
@@ -35,10 +35,13 @@ internal sealed class DisplayPreferenceService(RuntimeService runtime)
         var outputEnabled = output.Field("enabled"); var maxChars = output.OptionalNumber("max_chars");
         if (outputEnabled.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || maxChars is not (>= ToolOutputSettings.Minimum and <= ToolOutputSettings.Maximum))
             throw new JsonException(UiText.Get("ExecutionOutputSettingsInvalid"));
+        var fullPayloadDebug = value.Field("activity_full_payload_debug");
+        if (fullPayloadDebug.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.True or JsonValueKind.False))
+            throw new JsonException(UiText.Get("DisplayPreferenceInvalid"));
         var warning = value.Text("warning_code") == "display_preferences_load_failed"
             ? UiText.Format("ThemeLoadWarning", value.Text("warning_detail")) : value.Text("warning");
         var hint = value.Text("refresh_hint_code") == "refresh_chatgpt_connection"
             ? UiText.Get("DisplayRefreshConnectionHint") : value.Text("refresh_hint");
-        return new(enabled.GetBoolean(), revision.Value, warning, hint, new(outputEnabled.GetBoolean(), (int)maxChars.Value));
+        return new(enabled.GetBoolean(), revision.Value, warning, hint, new(outputEnabled.GetBoolean(), (int)maxChars.Value), fullPayloadDebug.ValueKind == JsonValueKind.True);
     }
 }

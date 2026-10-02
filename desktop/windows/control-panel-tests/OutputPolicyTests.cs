@@ -23,5 +23,10 @@ internal static class OutputPolicyTests
         row.Apply(Json(new { call_id = "source-fixture", updated_seq = 3, output_source = new { state = "partial", @ref = "partial", bytes = 4, reason = "源输出未完整保存" } }));
         check(row.ResponsePayload.ApplyPage(Json(new { payload = new { @ref = "partial" }, offset = 0, next_offset = 4, has_more = false, text = "1234" }), "partial", false), "partial source last page applies");
         check(row.ResponsePayload.Position == UiText.Format("ExecutionPayloadRangePartial", UiText.Format("ExecutionPayloadByteRange", 1L, 4L), 4L) + "；源输出未完整保存", "partial source retains its original storage reason and is never described as complete");
+        var preview = new ExecutionCallRow(Json(new { call_id = "preview-fixture", status = "succeeded", rpc_status = "succeeded", response = new { state = "preview_only", bytes = 2700000, preview = "large state preview", truncated = true, reason = "Normal-mode history policy" } }));
+        check(preview.ResponsePayload.StateLabel == UiText.Get("ExecutionPayloadPreviewOnly") && preview.Output == "large state preview", "intentional preview is rendered with its own state");
+        check(preview.ResponsePayload.Reason == UiText.Get("ExecutionPayloadPreviewOnlyReason") && !preview.ResponsePayload.NeedsLoad && !preview.ResponsePayload.CanReadNext, "preview explains the policy without fabricating full detail pages");
+        var unknown = new ExecutionPayloadView("response"); unknown.Describe(default);
+        check(unknown.State == "unknown" && unknown.StateLabel != preview.ResponsePayload.StateLabel, "old missing output is distinct from intentional preview");
     }
 }

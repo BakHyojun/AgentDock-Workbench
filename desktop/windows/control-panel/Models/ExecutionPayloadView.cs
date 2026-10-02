@@ -53,6 +53,7 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
     {
         "pending" => kind == "request" ? UiText.Get("ExecutionRequestSaving") : UiText.Get("ExecutionOutputWaiting"),
         "streaming" => UiText.Get("ExecutionOutputStreaming"), "complete" => UiText.Get("ExecutionPayloadSaved"), "partial" => UiText.Get("ExecutionOutputPartial"),
+        "preview_only" => UiText.Get("ExecutionPayloadPreviewOnly"),
         "not_stored" => UiText.Get("NotSaved"), "internal" => UiText.Get("ExecutionInternalCall"), _ => UiText.Get("ExecutionLegacyRecord")
     };
 
@@ -62,7 +63,7 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
         var reference = descriptor.Text("ref");
         var reset = Reference != reference;
         State = present ? descriptor.Text("state", "unknown") : "unknown";
-        _storageReason = descriptor.Text("reason");
+        _storageReason = State == "preview_only" ? UiText.Get("ExecutionPayloadPreviewOnlyReason") : descriptor.Text("reason");
         _knownBytes = descriptor.OptionalNumber("bytes") is >= 0;
         TotalBytes = descriptor.Number("bytes"); Lines = descriptor.Number("lines");
         Reference = reference;
