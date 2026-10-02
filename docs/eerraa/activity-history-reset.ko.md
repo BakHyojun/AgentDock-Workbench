@@ -3,7 +3,7 @@
 ## 사용 방법과 범위
 
 - 버전: `1.1.8102`. 기존 `1.1.8101` 후보 설치파일은 덮어쓰지 않는다.
-- Execution Center → 설정 메뉴 → **Activity 기록 초기화…** → 범위를 읽고 명시적으로 확인한다. 취소가 기본이다.
+- Execution Center → 설정 메뉴 → **Activity 기록 초기화…** → 범위를 읽고 명시적으로 확인한다. 취소가 기본이다. 긴 확인 설명은 화면 높이 안에서 자동 크기/스크롤로 읽을 수 있다.
 - 현재 AgentDock 홈 전체의 Activity journal, 호출 관리 overlay, 오래된 payload blob과 이어읽기 source를 삭제한다. 대화 하나나 작업공간 하나만 초기화하는 기능은 아니다.
 - 프로젝트 파일, 작업/스레드 상태, 대화 registry/continuation binding, 권한, 삽입 메시지, 설정, skills/plugins, 운영 로그는 대상이 아니다. `.agentdock` 전체 초기화가 아니다.
 - 도구 응답 최종 기록, 명령 프로세스, 승인 대기가 남아 있으면 초기화를 거부한다. 실행을 중단하거나 Core를 재시작하지 않는다.
@@ -41,4 +41,4 @@
 - `go vet ./...`, 변경 Go 파일 gofmt, `git diff --check`, `verify-version v1.1.8102` 통과.
 - Desktop pure policy 923개 단언, 한국어 presentation 6,942개 단언, 실제 ActivityClient reset 계약 통과. control-panel 및 layout 프로젝트 Release build 경고/오류 0.
 - 로그: `%TEMP%/agentdock-history-reset-{go-final,boundary-final,focused-final,storage-final,vet,desktop-build,desktop-policy,client-contract,localization,layout-build}.log`. 실패 로그를 그대로 보존한다.
-- 후보 Setup 패키징·자산 검증은 준비 단계다. GitHub 게시와 실제 설치·업그레이드·WPF runner 수용·Linux race는 실행하지 않았다. 운영 Core/설치/원본 로그는 변경하지 않았다.
+- 후보 Setup 패키징·자산 검증은 준비 단계다. GitHub 게시와 실제 설치·업그레이드·WPF runner 수용·Linux race는 실행하지 않았다. 긴 삭제 확인 설명의 큰 글꼴 회귀 시험은 `ActivityResetDialogTests`에 추가했으며 현재는 build만 가능하고 실제 실행은 runner 관문에 남는다. 운영 Core/설치/원본 로그는 변경하지 않았다.

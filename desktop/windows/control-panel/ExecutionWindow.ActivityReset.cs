@@ -10,7 +10,7 @@ public partial class ExecutionWindow
     {
         if (_resettingActivity || !ExecutionDialogs.Confirm(this,
             UiText.Get("ExecutionActivityResetTitle"), UiText.Get("ExecutionActivityResetWarning"),
-            UiText.Get("ExecutionActivityResetAccept"))) return;
+            UiText.Get("ExecutionActivityResetAccept"), scrollExplanation: true)) return;
         _resettingActivity = true;
         try
         {

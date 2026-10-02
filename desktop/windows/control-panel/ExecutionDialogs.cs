@@ -36,11 +36,18 @@ internal static class ExecutionDialogs
     {
         var ui = Create(owner, title); var close = Action(UiText.Get("ExecutionClose")); close.Click += (_, _) => ui.Window.Close(); ui.Actions.Children.Add(close); ui.Root.Children.Add(Readonly(text)); ui.Window.ShowDialog();
     }
-    internal static bool Confirm(Window owner, string title, string explanation, string? confirm = null)
+    internal static bool Confirm(Window owner, string title, string explanation, string? confirm = null, bool scrollExplanation = false)
     {
         var ui = Create(owner, title, 500, 230);
         ui.Window.ResizeMode = ResizeMode.NoResize;
-        ui.Root.Children.Add(Label(explanation));
+        if (scrollExplanation)
+        {
+            ui.Window.SizeToContent = SizeToContent.Height;
+            ui.Window.MaxHeight = SystemParameters.WorkArea.Height;
+            ui.Root.Children.Add(new ScrollViewer { Content = Label(explanation), VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                MaxHeight = Math.Max(0, ui.Window.MaxHeight - ui.Window.MinHeight) });
+        }
+        else ui.Root.Children.Add(Label(explanation));
         var cancel = Action(UiText.Get("ExecutionCancel"), "ExecutionConfirmCancel"); cancel.IsCancel = true;
         var ok = Action(confirm ?? UiText.Get("ExecutionConfirm"), "ExecutionConfirmAccept");
         cancel.Click += (_, _) => ui.Window.Close();
