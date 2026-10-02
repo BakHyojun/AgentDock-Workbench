@@ -14,7 +14,7 @@
 
 ## 검증·전달
 
-구현 완료 후 최종 Go·Windows desktop·다국어 모델 검증을 수행한다. 실패는 보존하고 변경과 무관한 기존 실패를 숨기지 않는다. clean clone에서 Windows x64 후보 Setup을 빌드하고 실제 내부 payload/한국어 assembly/rg/CUA와 source identity·SHA256을 확인한다. 운영 PC 설치·업그레이드·복구·Core 재시작, runner guard 우회, CI 재활성화 및 GitHub Release 게시를 수행하지 않는다. 완료한 검증과 산출물은 아래에 기록한다.
+구현 완료 후 최종 Go·Windows desktop·다국어 모델 검증을 수행했다. 실패는 보존하고 변경과 무관한 기존 실패를 숨기지 않는다. clean clone에서 Windows x64 후보 Setup을 빌드하고 실제 내부 payload/한국어 assembly/rg/CUA와 source identity·SHA256을 확인했다. 운영 PC 설치·업그레이드·복구·Core 재시작, runner guard 우회 및 CI 재활성화는 수행하지 않았다. 후속 사용자 요청으로 같은 설치파일을 GitHub에 공개했으며 빌드·수용·공개를 아래에서 구분한다.
 
 - Go 전체 최종 suite: 변경한 Activity/app/HTTP, installer/shim, MCP 및 scripts 통과. 이전 기준선에서 확인한 실패 2건은 유지했다. `TestManagedTaskFirstPage1000` 2초 목표 대비 4,934.228 ms, `TestSearchTextRGExitCodes`의 예상 `SEARCH_FAILED` 대비 사전 검증 `INVALID_REGEX`. `%TEMP%/agentdock-8200-go-final.log` 보존. 실패를 삭제하거나 단언을 완화하지 않았다.
 - Go formatting·vet·`verify-version v1.1.8200` 통과. Release desktop build 경고/오류 0, pure policy 923 assertions, 다국어 모델·한국어 7,307 assertions 통과. 최종 검토에서 null descriptor code의 원문 fallback을 추가한 뒤 해당 한국어/모델 시험만 한 번 다시 실행하여 **7,310 assertions** 통과. 전체 suite를 반복하지 않았다.
@@ -31,4 +31,14 @@
 - Setup을 실행하지 않고 innounp로 추출했다. 내장 ZIP SHA-256 `6607b6aa925b68928ab3baac58c8ca99dbef86554d6b00bf6c3737eb1d711300`이 외부 payload와 동일하다. 실제 내장 tray의 desktop assembly·ko-KR satellite bytes가 clean-clone 빌드와 일치하며, 그 satellite를 ResourceReader로 읽어 1,171키와 새 29키의 한글을 확인했다. 스크린샷 문구는 `귀속되지 않은 기록`, `식별되지 않은 대화 · 독립 호출`, `실행 권한 변경`이다.
 - 내장 rg 15.2.0 파일 5개와 CUA 플러그인 파일 4개, shim bytes와 cloudflared bytes, Setup 한국어 선택을 확인했다. 패키지 검증기는 실제 packaged Core 버전/commit과 desktop source identity, PE x64, checksum을 확인하고 임시 Skill/plugin home에서 fresh/repeat bootstrap을 검증했다. 운영 runtime/설정은 사용하지 않았다.
 - payload 증거: `D:/Engineering/release/agentdock-1.1.8200-0383a90d/payload-evidence.json`. 로그: `%TEMP%/agentdock-8200-release-build.log`, `agentdock-8200-assets-final.log`, `agentdock-8200-unpack.log`, `agentdock-8200-assets-metadata-final.log`.
-- GitHub Release 게시와 게시 자산 재다운로드는 하지 않았다. 저장소 Actions `enabled=false`를 유지한다. 이전 후보 설치파일 bytes는 변경하지 않았다. 로컬 후보 전달은 실제 isolated Windows 설치 수용을 의미하지 않는다.
+- 저장소 Actions `enabled=false`를 유지한다. 이전 후보 설치파일 bytes는 변경하지 않았다. 아래 공개 완료도 실제 isolated Windows 설치 수용을 의미하지 않는다.
+
+## GitHub 공개와 원격 main 반영
+
+- 후속 사용자 요청에 따라 [v1.1.8200](https://github.com/eerraa/AgentDock-Workbench/releases/tag/v1.1.8200)을 공개했다. Draft=false, Pre-release=true, Latest=false. 실제 설치 수용 미실행 상태를 이유로 공개 사전 릴리즈를 선택했고 정식 latest 1.1.8100은 유지했다.
+- [Windows x64 Setup 직접 다운로드](https://github.com/eerraa/AgentDock-Workbench/releases/download/v1.1.8200/AgentDockSetup-amd64.exe). README.md/README.zh-CN.md의 fork 다운로드·버전 안내도 이 릴리즈에 연결했다. upstream 라이선스와 attribution은 유지한다.
+- annotated 태그 `v1.1.8200`은 실제 빌드 source `0383a90d252ec8e924a166254c7db1e09437bf90`을 가리킨다. 태그 메시지에 `[skip ci]`를 넣었으며 origin에만 push했다. main에는 source와 후속 문서를 fast-forward로 반영한다. 공개 태그나 이전 설치파일을 이동/덮어쓰지 않았다.
+- 자산은 Setup, build-report.json, verification-scope.json과 각 `.sha256`, 정확히 6개다. Draft와 공개 후 각각 별도 폴더로 실제 다운로드하여 6개 모두의 크기·SHA-256·GitHub API digest가 로컬 원본과 동일함을 확인했다. 공개 Setup URL의 인증 없는 HEAD는 200, Content-Length는 112,690,821이었다. 공개 release 본문과 저장소 release notes도 일치한다.
+- 설치파일 SHA-256과 bytes는 위 빌드 결과 그대로다. 동봉한 metadata는 제작 당시 `candidate-not-released`/게시 `not_run` 스냅샷을 보존한다. 공개 사실을 만들기 위해 metadata나 실행파일을 다시 쓰거나 빌드하지 않았다.
+- 게시 증거는 `D:/Engineering/release/agentdock-1.1.8200-0383a90d/draft-publication-evidence.json`, `public-publication-evidence.json`. 다운로드는 같은 경로 아래 `github-draft-redownload`, `github-public-redownload`다. source/회귀 검사를 반복하지 않고 게시 자산만 검사했다.
+- 사용자가 다음 릴리즈를 등록하는 절차는 [Windows 릴리즈 등록 안내](windows-release.ko.md)에 있다. upstream CI 문서의 자동 빌드/덮어쓰기 절차를 이 fork에 적용하지 않는다.

@@ -10,13 +10,14 @@
 
 AgentDock Workbench 将 ChatGPT、Claude、Codex 等 MCP 客户端连接到本地电脑、远程服务器和移动节点，并在 AgentDock 运行时之上提供以对话为中心的任务管理、工具调用追踪、审批、权限、中途插入、插件管理和多设备协同能力。
 
-[下载发行版](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases) · [正式版 v1.1.7](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases/tag/v1.1.7) · [预发布版 v1.1.8](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases/tag/v1.1.8) · [提交问题](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/issues)
+[下载 Windows x64 Setup 1.1.8200](https://github.com/eerraa/AgentDock-Workbench/releases/download/v1.1.8200/AgentDockSetup-amd64.exe) · [Fork 发行版](https://github.com/eerraa/AgentDock-Workbench/releases) · [正式版 v1.1.8100](https://github.com/eerraa/AgentDock-Workbench/releases/tag/v1.1.8100) · [预发布版 v1.1.8200](https://github.com/eerraa/AgentDock-Workbench/releases/tag/v1.1.8200)
 
-[![CI](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/actions/workflows/ci.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/A-m-o-r-F-a-t-i/AgentDock-Workbench?display_name=tag&logo=github)](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases)
-[![License](https://img.shields.io/github/license/A-m-o-r-F-a-t-i/AgentDock-Workbench)](./LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/eerraa/AgentDock-Workbench?include_prereleases&display_name=tag&logo=github)](https://github.com/eerraa/AgentDock-Workbench/releases)
+[![License](https://img.shields.io/github/license/eerraa/AgentDock-Workbench)](./LICENSE)
 
 </div>
+
+本扩展 fork 仅发布 Windows x64 Setup。1.1.8200 是未签名预发布版，尚未执行真实隔离环境的安装和升级验收。[版本说明](./docs/releases/v1.1.8200.md) · [한국어 릴리즈 등록 안내](./docs/eerraa/windows-release.ko.md)。源码基线仍为上游 v1.1.8。
 
 <p align="center">
   <img
@@ -76,7 +77,7 @@ AgentDock Workbench 将 ChatGPT、Claude、Codex 等 MCP 客户端连接到本�
 | Linux | 无界面 Core 与管理 CLI，适合本机、服务器和脚本化操作。 | 通过发行包或源码构建使用。 |
 | 容器 / VPS | 通过 MCP、CLI、认证和远程连接运行无界面 Core。 | 具体能力取决于所选发行资产与部署环境。 |
 
-　　不同版本与 CPU 架构提供的安装资产可能不同，安装前应核对 Release 的文件列表和说明。当前 Latest 正式版为 v1.1.7，v1.1.8 仍是用于跨平台验证的预发布版本。
+　　上表描述上游的平台能力。本 fork 仅发布 Windows x64：正式版 v1.1.8100 和预发布版 v1.1.8200。安装前应核对 fork Release 的说明和验证范围。
 
 ## 典型使用场景
 
@@ -89,9 +90,9 @@ AgentDock Workbench 将 ChatGPT、Claude、Codex 等 MCP 客户端连接到本�
 
 ## 快速开始
 
-1. 打开 [Releases](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases)，选择正式版或当前预发布版。
-2. 下载与操作系统和 CPU 架构对应的安装包。
-3. 启动 AgentDock Core；平台提供原生界面时，同时启动 Workbench。
+1. 打开 [fork Releases](https://github.com/eerraa/AgentDock-Workbench/releases)，选择正式版或当前预发布版。
+2. 从 Assets 下载 **AgentDockSetup-amd64.exe**。Source code 压缩包不是安装程序。
+3. 在 Windows x64 电脑上运行 Setup 安装或更新 Workbench。
 4. 获取 MCP 地址与 Bearer Token，或完成 OAuth 连接。
 5. 将连接信息加入 AI 客户端的 MCP、Tools 或 Connectors 设置。
 
@@ -125,8 +126,9 @@ AgentDock Workbench 将 ChatGPT、Claude、Codex 等 MCP 客户端连接到本�
 | Skill 与自包含插件 | [Agent 插件](./docs/agent-plugins.md) |
 | Tailscale Funnel 连接 | [Tailscale Funnel](./docs/tailscale-funnel.md) |
 | 与上游差异及迁移 | [版本差异与迁移](./docs/official-version-differences-and-migration.md) |
-| 当前正式版 | [v1.1.7 版本说明](./docs/releases/v1.1.7.md) |
-| 当前预发布版 | [v1.1.8 版本说明](./docs/releases/v1.1.8.md) |
+| 当前 fork 正式版 | [v1.1.8100 版本说明](./docs/releases/v1.1.8100.md) |
+| 当前 fork 预发布版 | [v1.1.8200 版本说明](./docs/releases/v1.1.8200.md) |
+| Windows 发行注册 | [한국어 릴리즈 등록 안내](./docs/eerraa/windows-release.ko.md) |
 
 ## 仓库结构
 
@@ -149,9 +151,9 @@ AgentDock Workbench 将 ChatGPT、Claude、Codex 等 MCP 客户端连接到本�
 make check
 ```
 
-　　GitHub Actions 持续执行集成测试、静态检查、平台构建、安装包生成和发行验证。源码构建、安装包生成、安装测试与正式发布是不同交付状态，源码编译成功不等于安装或升级流程已经验证。
+　　本 fork 按仓库策略关闭 GitHub Actions，使用干净的本地 clone 构建。真实隔离 runner 的安装验收是独立交付状态，源码编译成功不等于安装或升级流程已经验证。
 
-　　可复现的缺陷和功能需求统一提交到 [GitHub Issues](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/issues)。问题涉及执行失败时，应提供 Workbench 版本、操作系统、相关任务或调用状态，以及完成脱敏的日志。
+　　可复现的 fork 缺陷和功能需求提交到 [GitHub Issues](https://github.com/eerraa/AgentDock-Workbench/issues)。问题涉及执行失败时，应提供 Workbench 版本、操作系统、相关任务或调用状态，以及完成脱敏的日志。
 
 ## 与上游的关系
 

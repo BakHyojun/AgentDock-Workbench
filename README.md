@@ -10,13 +10,14 @@ English | [简体中文](./README.zh-CN.md)
 
 AgentDock Workbench connects ChatGPT, Claude, Codex, and other MCP clients to local computers, remote servers, and mobile nodes. It combines the AgentDock runtime with a conversation-centered control plane for tasks, tool calls, approvals, permissions, mid-task instructions, plugins, and multi-device operations.
 
-[Download releases](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases) · [Stable v1.1.7](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases/tag/v1.1.7) · [Preview v1.1.8](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases/tag/v1.1.8) · [Report an issue](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/issues)
+[Download Windows x64 Setup 1.1.8200](https://github.com/eerraa/AgentDock-Workbench/releases/download/v1.1.8200/AgentDockSetup-amd64.exe) · [Fork releases](https://github.com/eerraa/AgentDock-Workbench/releases) · [Stable v1.1.8100](https://github.com/eerraa/AgentDock-Workbench/releases/tag/v1.1.8100) · [Preview v1.1.8200](https://github.com/eerraa/AgentDock-Workbench/releases/tag/v1.1.8200)
 
-[![CI](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/actions/workflows/ci.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/A-m-o-r-F-a-t-i/AgentDock-Workbench?display_name=tag&logo=github)](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases)
-[![License](https://img.shields.io/github/license/A-m-o-r-F-a-t-i/AgentDock-Workbench)](./LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/eerraa/AgentDock-Workbench?include_prereleases&display_name=tag&logo=github)](https://github.com/eerraa/AgentDock-Workbench/releases)
+[![License](https://img.shields.io/github/license/eerraa/AgentDock-Workbench)](./LICENSE)
 
 </div>
+
+This extension fork distributes Windows x64 Setup only. Version 1.1.8200 is an unsigned pre-release; actual isolated installation and upgrade acceptance have not been run. [Release notes](./docs/releases/v1.1.8200.md) · [한국어 릴리즈 등록 안내](./docs/eerraa/windows-release.ko.md). The Workbench source baseline remains upstream v1.1.8.
 
 <p align="center">
   <img
@@ -76,7 +77,7 @@ A conversation is resolved from trusted host metadata. Tasks and calls inherit t
 | Linux | Headless Core and management CLI for local, server, and scripted operation. | Available through release packages and source builds. |
 | Containers / VPS | Headless runtime with MCP, CLI, authentication, and remote access options. | Deployment depends on the selected release asset and environment. |
 
-Release assets vary by version and CPU architecture. Check the asset list and release notes before installing. The latest stable release remains v1.1.7; v1.1.8 is currently a pre-release for cross-platform validation.
+The table describes upstream platform capabilities. This fork ships Windows x64 only: stable v1.1.8100 and pre-release v1.1.8200. Check the fork release notes and validation scope before installing.
 
 ## Typical workflows
 
@@ -89,9 +90,9 @@ Release assets vary by version and CPU architecture. Check the asset list and re
 
 ## Quick start
 
-1. Open [Releases](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/releases) and choose the stable release or the current preview.
-2. Download the package matching your operating system and CPU architecture.
-3. Start AgentDock Core and, where available, the native Workbench client.
+1. Open [fork Releases](https://github.com/eerraa/AgentDock-Workbench/releases) and choose the stable release or current preview.
+2. Download **AgentDockSetup-amd64.exe** from Assets. The Source code archives are not installers.
+3. Run Setup on your Windows x64 PC to install or update the Workbench.
 4. Obtain the MCP endpoint and Bearer Token or complete the OAuth connection flow.
 5. Add the endpoint to the MCP, Tools, or Connectors settings of your AI client.
 
@@ -125,8 +126,9 @@ Keep authentication enabled for every non-local connection. Do not publish token
 | Skills and self-contained plugins | [Agent plugins](./docs/agent-plugins.md) |
 | Tailscale Funnel access | [Tailscale Funnel](./docs/tailscale-funnel.md) |
 | Differences from upstream and migration | [Version differences and migration](./docs/official-version-differences-and-migration.md) |
-| Stable release details | [v1.1.7 release notes](./docs/releases/v1.1.7.md) |
-| Preview release details | [v1.1.8 release notes](./docs/releases/v1.1.8.md) |
+| Stable fork release details | [v1.1.8100 release notes](./docs/releases/v1.1.8100.md) |
+| Preview fork release details | [v1.1.8200 release notes](./docs/releases/v1.1.8200.md) |
+| Registering a Windows release | [한국어 릴리즈 등록 안내](./docs/eerraa/windows-release.ko.md) |
 
 ## Repository layout
 
@@ -149,9 +151,9 @@ Read [AGENTS.md](./AGENTS.md) before changing the repository. Run the complete r
 make check
 ```
 
-GitHub Actions performs continuous integration, static checks, platform builds, package construction, and release validation. Platform-specific packaging and installation tests are separate delivery states; a successful source build does not by itself prove that an installer or upgrade path has been validated.
+GitHub Actions is disabled for this fork by repository policy. Builds use a clean local clone; actual isolated runner acceptance remains a separate delivery state. A successful source build does not by itself prove that an installer or upgrade path has been validated.
 
-Submit reproducible bugs and feature requests through [GitHub Issues](https://github.com/A-m-o-r-F-a-t-i/AgentDock-Workbench/issues). Include the Workbench version, operating system, relevant call or task state, and redacted logs when they affect the failure.
+Submit reproducible fork bugs and feature requests through [GitHub Issues](https://github.com/eerraa/AgentDock-Workbench/issues). Include the Workbench version, operating system, relevant call or task state, and redacted logs when they affect the failure.
 
 ## Relationship to upstream
 
