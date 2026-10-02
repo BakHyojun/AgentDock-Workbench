@@ -52,6 +52,7 @@ type Runtime struct {
 	permissions              *permission.Store
 	tasks                    *taskstate.Store
 	executionMu              sync.Mutex
+	activityResetMu          sync.RWMutex // admission through final adapter audit
 	activeCalls              map[string]*liveExecution
 	pendingCalls             map[string]*preparedExecution
 	executionWG              sync.WaitGroup

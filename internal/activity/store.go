@@ -475,7 +475,7 @@ func (s *Store) appendBatchLocked(requests []*appendRequest) map[*appendRequest]
 	if err == nil && len(files) > s.options.Segments {
 		count := len(files) - s.options.Segments
 		start, _ := segmentSequence(files[count])
-		state.PrunedThrough = start - 1
+		state.PrunedThrough = max(state.PrunedThrough, start-1)
 		if err = s.saveState(state); err == nil {
 			for _, old := range files[:count] {
 				if removeErr := os.Remove(old); removeErr != nil {
@@ -597,7 +597,7 @@ func (s *Store) Cleanup(ctx context.Context, before time.Time) (int, error) {
 			break
 		}
 		next, _ := segmentSequence(files[i+1])
-		state.PrunedThrough = next - 1
+		state.PrunedThrough = max(state.PrunedThrough, next-1)
 		if err = s.saveState(state); err != nil {
 			return count, err
 		}

@@ -329,7 +329,13 @@ public partial class ExecutionWindow : Window
             _cursor = Math.Max(_cursor, message.Seq); UpsertCall(message.Value); UpdateEmpty();
             if (_following && Calls.Count > 0) CallsList.ScrollIntoView(Calls[^1]);
         }
-        else if (message.Kind is "gap" or "warning") Warn(message.Message.Length > 0 ? message.Message : UiText.Get("ExecutionHistoryUnavailable"), message.Kind == "gap" ? "activity_retention_gap" : "");
+        else if (message.Kind == "gap")
+        {
+            ClearActivityPresentation();
+            Warn(message.Message.Length > 0 ? message.Message : UiText.Get("ExecutionHistoryUnavailable"), "activity_retention_gap");
+            await GuardAsync(() => LoadCallsAsync(false));
+        }
+        else if (message.Kind == "warning") Warn(message.Message.Length > 0 ? message.Message : UiText.Get("ExecutionHistoryUnavailable"));
         else if (message.Kind == "reset") await GuardAsync(() => LoadCallsAsync(false));
     }
     private async Task LoadCallDetailAsync(ExecutionCallRow row)

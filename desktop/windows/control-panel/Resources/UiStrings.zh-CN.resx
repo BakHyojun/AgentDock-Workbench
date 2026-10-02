@@ -3266,4 +3266,11 @@
   <data name="ExecutionPayloadPreviewOnlyReason" xml:space="preserve"><value>普通模式仅保留超过 256 KiB 的活动数据预览。</value></data>
   <data name="ExecutionActivityFullPayloadDebug" xml:space="preserve"><value>保留完整活动数据以供调试</value></data>
   <data name="ExecutionActivityFullPayloadDebugHelp" xml:space="preserve"><value>普通模式仅为超过 256 KiB 的数据保留 2 KiB 预览。启用调试后，在现有存储上限内保留完整数据。工具响应和继续读取不受影响。</value></data>
+  <data name="ExecutionActivityResetTitle" xml:space="preserve"><value>重置 Activity 历史…</value></data>
+  <data name="ExecutionActivityResetWarning" xml:space="preserve"><value>永久删除此 AgentDock 主目录内所有会话的 Activity 记录和保存的工具参数、结果及续读输出。此操作不可撤销。任务、会话、权限、设置和项目文件保留。请先完成工具及命令执行并处理待审批请求。最近五分钟内保存的输出暂时受保护。</value></data>
+  <data name="ExecutionActivityResetAccept" xml:space="preserve"><value>重置历史</value></data>
+  <data name="ExecutionActivityResetBusy" xml:space="preserve"><value>仍有工具响应、命令执行或待审批请求，无法重置 Activity 历史。完成工作并处理审批后重试。</value></data>
+  <data name="ExecutionActivityResetDone" xml:space="preserve"><value>Activity 历史已重置。回收输出容量：{0:N0} 字节。剩余输出容量：{1:N0} 字节。</value></data>
+  <data name="ExecutionActivityResetProtected" xml:space="preserve"><value>最近的输出保留五分钟的发布保护期。若要回收剩余空间，请停止工具调用五分钟后再次重置。</value></data>
+  <data name="ExecutionActivityResetIncomplete" xml:space="preserve"><value>历史已重置，但部分文件清理或容量记录未完成。请检查剩余容量，并在运行时空闲时重试清理。</value></data>
 </root>

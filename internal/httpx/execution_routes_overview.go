@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"context"
+	"github.com/uvwt/agentdock/internal/activity"
 	"github.com/uvwt/agentdock/internal/app"
 	"github.com/uvwt/agentdock/internal/config"
 	"github.com/uvwt/agentdock/internal/taskstate"
@@ -12,6 +13,25 @@ import (
 // Resource dispatch shares the original authentication, deadline and JSON boundary.
 func (h *activityHTTP) serveExecutionOverview(ctx context.Context, w http.ResponseWriter, r *http.Request, runtime executionRuntime, parts []string) {
 	finish, require := executionResponse(w, r)
+	if len(parts) == 3 && parts[0] == "execution" && parts[1] == "history" && parts[2] == "reset" {
+		if !require("POST") {
+			return
+		}
+		var request app.ActivityResetRequest
+		if !decodeExecutionBody(w, r, &request) {
+			return
+		}
+		service, ok := h.runtime.(interface {
+			RuntimeResetActivity(context.Context, app.ActivityResetRequest) (activity.ResetResult, error)
+		})
+		if !ok {
+			writeRuntimeAPIError(w, 503, "RESET_UNAVAILABLE", "Activity reset unavailable")
+			return
+		}
+		result, err := service.RuntimeResetActivity(ctx, request)
+		finish(result, err)
+		return
+	}
 	if len(parts) == 2 && parts[0] == "execution" && parts[1] == "notifications" {
 		if !require("POST") {
 			return

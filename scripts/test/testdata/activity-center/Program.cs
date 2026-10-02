@@ -12,6 +12,7 @@ internal static partial class Program
     private static int Main(string[] args)
     {
         if (args.SequenceEqual(new[] { "--localization-only" })) { TestKoreanPresentation(); return 0; }
+        if (args.SequenceEqual(new[] { "--activity-reset-contract-only" })) { TestActivityResetClientAsync().GetAwaiter().GetResult(); return 0; }
         if (args.Length != 1 || Directory.Exists(args[0])) throw new ArgumentException("Provide a fresh isolated test directory.");
         Directory.CreateDirectory(args[0]);
         var started = Stopwatch.StartNew();

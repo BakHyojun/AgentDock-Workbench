@@ -3266,4 +3266,11 @@ Shortcuts: Ctrl+F searches conversations, F5 refreshes, Esc closes details, and 
   <data name="ExecutionPayloadPreviewOnlyReason" xml:space="preserve"><value>Normal mode retains only a preview of Activity payloads over 256 KiB.</value></data>
   <data name="ExecutionActivityFullPayloadDebug" xml:space="preserve"><value>Save full Activity payloads for debugging</value></data>
   <data name="ExecutionActivityFullPayloadDebugHelp" xml:space="preserve"><value>Normally, payloads over 256 KiB retain only a 2 KiB preview. Debugging saves full payloads within existing limits. Tool responses and continuation reads are unaffected.</value></data>
+  <data name="ExecutionActivityResetTitle" xml:space="preserve"><value>Reset Activity history…</value></data>
+  <data name="ExecutionActivityResetWarning" xml:space="preserve"><value>Permanently remove Activity records and stored tool parameters, results and continuation outputs for all conversations in this AgentDock home. This cannot be undone. Tasks, conversations, permissions, settings and project files remain. Finish running tools and commands and resolve pending approvals first. Outputs captured within the last five minutes remain protected temporarily.</value></data>
+  <data name="ExecutionActivityResetAccept" xml:space="preserve"><value>Reset history</value></data>
+  <data name="ExecutionActivityResetBusy" xml:space="preserve"><value>Activity history cannot be reset while a tool response, command or approval is pending. Finish the work and resolve approvals, then try again.</value></data>
+  <data name="ExecutionActivityResetDone" xml:space="preserve"><value>Activity history reset. Reclaimed payload bytes: {0:N0}. Remaining payload bytes: {1:N0}.</value></data>
+  <data name="ExecutionActivityResetProtected" xml:space="preserve"><value>Recent outputs retain a five-minute publication safety window. To reclaim their remaining space, reset again after five minutes without tool calls.</value></data>
+  <data name="ExecutionActivityResetIncomplete" xml:space="preserve"><value>History was reset, but some file cleanup or accounting did not finish. Check remaining space and retry cleanup when the runtime is idle.</value></data>
 </root>

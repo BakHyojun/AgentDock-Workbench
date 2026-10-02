@@ -112,6 +112,7 @@ type ToolResponse struct {
 	auditReceived         time.Time
 	auditStatus           string
 	auditFullPayloadDebug bool
+	auditRelease          func()
 	mu                    sync.Mutex
 	binding               activity.Binding
 	warning               string

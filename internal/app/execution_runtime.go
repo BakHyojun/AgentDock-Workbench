@@ -560,6 +560,10 @@ func (r *Runtime) RuntimeApprovalRequest(ctx context.Context, id string) (Result
 	return result, nil
 }
 func (r *Runtime) RuntimeApprovalDecision(ctx context.Context, id, action string, allowWorkspace bool) (Result, error) {
+	if !r.activityResetMu.TryRLock() {
+		return nil, toolError("ACTIVITY_RESET_BUSY", "Activity history is being reset. The approval was not changed.", "conflict")
+	}
+	defer r.activityResetMu.RUnlock()
 	return r.runtimeApprovalDecision(ctx, id, action, allowWorkspace, permission.ReviewerUser)
 }
 func (r *Runtime) runtimeApprovalDecision(ctx context.Context, id, action string, allowWorkspace bool, reviewer string) (Result, error) {

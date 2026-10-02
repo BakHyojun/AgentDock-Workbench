@@ -34,7 +34,7 @@ func (r *Runtime) executionPayloadEvent(ctx context.Context, binding activity.Bi
 	return event, true
 }
 
-func bindResponseAudit(ctx context.Context, binding activity.Binding, name string, redactor activity.Redactor, received time.Time, status string, fullDebug bool) bool {
+func bindResponseAudit(ctx context.Context, binding activity.Binding, name string, redactor activity.Redactor, received time.Time, status string, fullDebug bool, release func()) bool {
 	response, _ := ctx.Value(toolResponseKey{}).(*ToolResponse)
 	if response == nil || binding.ParentCallID != "" {
 		return false
@@ -44,6 +44,7 @@ func bindResponseAudit(ctx context.Context, binding activity.Binding, name strin
 	response.auditBinding, response.auditName, response.auditRedactor = binding, name, redactor
 	response.auditReceived, response.auditStatus = received, status
 	response.auditFullPayloadDebug = fullDebug
+	response.auditRelease = release
 	return true
 }
 
@@ -66,7 +67,12 @@ func (r *Runtime) RecordToolResponse(response *ToolResponse, envelope any) {
 	}
 	received, status := response.auditReceived, response.auditStatus
 	fullDebug := response.auditFullPayloadDebug
+	release := response.auditRelease
+	response.auditRelease = nil
 	response.mu.Unlock()
+	if release != nil {
+		defer release()
+	}
 	r.recordExecutionPayload(binding, name, "response", envelope, redactor, fullDebug)
 	// This server-side boundary includes final-envelope serialization and
 	// observation storage. It does not invent downstream network delivery time.

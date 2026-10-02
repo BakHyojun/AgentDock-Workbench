@@ -42,6 +42,15 @@ type preparedExecution struct {
 }
 
 func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[string]any) (result Result, returnErr error) {
+	if !r.activityResetMu.TryRLock() {
+		return nil, toolError("ACTIVITY_RESET_BUSY", "Activity history is being reset. The tool was not dispatched.", "conflict")
+	}
+	resetRelease := r.activityResetMu.RUnlock
+	defer func() {
+		if resetRelease != nil {
+			resetRelease()
+		}
+	}()
 	settings := r.MCPPresentationSettings()
 	outputPolicy := settings.ToolOutput
 	fullPayloadDebug := settings.ActivityFullPayloadDebug
@@ -99,7 +108,9 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 		// SDK and Bridge adapters persist the final envelope once, after adding the
 		// service catalog and trusted user insertions. Direct Runtime callers have
 		// no adapter and retain their actual returned result here.
-		if !bindResponseAudit(ctx, binding, spec.Name, redactor, received, rpcReturnStatus(result, returnErr), fullPayloadDebug) {
+		if bindResponseAudit(ctx, binding, spec.Name, redactor, received, rpcReturnStatus(result, returnErr), fullPayloadDebug, resetRelease) {
+			resetRelease = nil // adapter owns the lease until its final envelope audit
+		} else {
 			value := map[string]any{"result": result, "isError": returnErr != nil || resultReportsFailure(result)}
 			if returnErr != nil {
 				value["error"] = returnErr.Error()
@@ -554,6 +565,15 @@ func (r *Runtime) validateSessionOwnership(ctx context.Context, name string, arg
 
 func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (result Result, returnErr error) {
 	defer r.executionWG.Done()
+	// Keep delayed approvals active through all payload/progress publication.
+	defer func() {
+		r.executionMu.Lock()
+		if live := r.activeCalls[p.state.binding.CallID]; live != nil {
+			live.cancel()
+			delete(r.activeCalls, p.state.binding.CallID)
+		}
+		r.executionMu.Unlock()
+	}()
 	ctx, finishProgress := r.observeExecutionProgress(ctx, p.state.binding, p.spec.Name, r.executionRedactor(p.args))
 	defer finishProgress()
 	defer func() {
@@ -566,14 +586,6 @@ func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (re
 			}
 			r.recordExecutionPayload(p.state.binding, p.spec.Name, "response", value, r.executionRedactor(p.args), p.fullPayloadDebug)
 		}
-	}()
-	defer func() {
-		r.executionMu.Lock()
-		if live := r.activeCalls[p.state.binding.CallID]; live != nil {
-			live.cancel()
-			delete(r.activeCalls, p.state.binding.CallID)
-		}
-		r.executionMu.Unlock()
 	}()
 	state := p.state
 	completion, reserveErr := r.activity.ReserveAppend(ctx, 1)
@@ -759,7 +771,11 @@ func (r *Runtime) decorateExecution(result Result, p *preparedExecution) Result 
 	return r.applyToolOutputPolicy(p, decorated)
 }
 func (r *Runtime) watchApprovalCommand(approvalID, callID, sessionID string) {
+	// Its RPC may already have returned while the command is still running.
+	// Do not erase the completion before this watcher settles the approval.
+	r.activityResetMu.RLock()
 	go func() {
+		defer r.activityResetMu.RUnlock()
 		tick := time.NewTicker(300 * time.Millisecond)
 		defer tick.Stop()
 		for {

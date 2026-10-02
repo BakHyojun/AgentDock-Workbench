@@ -175,6 +175,7 @@ public partial class ExecutionWindow
         var menu = Menu(Anchor(sender, ConversationHeader));
         ActionMenu(menu, UiText.Get("ExecutionDisplayRetentionNotifications"), OpenDisplayPreferencesAsync);
         ActionMenu(menu, UiText.Get("ExecutionHistoryManagerTitle"), () => OpenDataManagerAsync(false));
+        ActionMenu(menu, UiText.Get("ExecutionActivityResetTitle"), ResetActivityHistoryAsync, !_resettingActivity);
         ActionMenu(menu, UiText.Get("ExecutionSaveCurrentFilter"), () => { var name = ExecutionDialogs.Prompt(this, UiText.Get("ExecutionSaveFilter"), UiText.Get("ExecutionFilterName"), ""); if (!string.IsNullOrWhiteSpace(name)) { _preferences.SavedFilters[name] = [_conversationView, SearchBox.Text, CallSearchBox.Text, ComboValue(CallStatusCombo)]; SavePreferences(); } return Task.CompletedTask; });
         foreach (var pair in _preferences.SavedFilters.ToArray())
             ActionMenu(menu, UiText.Get("ExecutionFilterPrefix") + pair.Key, async () => { var values = pair.Value; if (values.Length != 4) return; _conversationView = values[0]; SearchBox.Text = values[1]; CallSearchBox.Text = values[2]; CallStatusCombo.SelectedItem = CallStatusCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag?.ToString() == values[3]); await LoadObjectsAsync(); });
