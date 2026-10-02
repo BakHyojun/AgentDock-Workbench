@@ -14,6 +14,7 @@ func (r *Runtime) appendReservedExecution(reservation *activity.AppendReservatio
 	if reservation == nil {
 		return r.appendExecution(event)
 	}
+	event = describeOwnedManagement(event)
 	if event.OwnerInstance == "" {
 		event.OwnerPID = os.Getpid()
 		event.OwnerInstance = r.executionInstance

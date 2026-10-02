@@ -33,7 +33,7 @@ func (value *LocalizedText) valid(raw string) bool {
 	if value == nil || value.SchemaVersion != 1 || len(value.Code) == 0 || len(value.Code) > 96 || len(value.Args) > 6 || value.TextHash != textDigest(raw) {
 		return false
 	}
-	if value.Code != "permission.update" && value.Code != "permission.updated" && !strings.HasPrefix(value.Code, "tool.") {
+	if value.Code != "permission.update" && value.Code != "permission.updated" && !strings.HasPrefix(value.Code, "tool.") && !strings.HasPrefix(value.Code, "management.") {
 		return false
 	}
 	for _, r := range value.Code {

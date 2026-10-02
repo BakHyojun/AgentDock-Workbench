@@ -105,6 +105,9 @@ internal static class UiText
         return Resources.GetString(key, _resourceCulture) ?? key;
     }
 
+    // Known server-authored legacy templates; never the user's preferred locale.
+    internal static string Original(string key) => Resources.GetString(key, CultureInfo.GetCultureInfo(SimplifiedChinesePreference)) ?? key;
+
     public static string Format(string key, params object?[] args)
     {
         return string.Format(CultureInfo.CurrentCulture, Get(key), args);

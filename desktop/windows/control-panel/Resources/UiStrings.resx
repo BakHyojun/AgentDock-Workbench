@@ -3273,4 +3273,33 @@ Shortcuts: Ctrl+F searches conversations, F5 refreshes, Esc closes details, and 
   <data name="ExecutionActivityResetDone" xml:space="preserve"><value>Activity history reset. Reclaimed payload bytes: {0:N0}. Remaining payload bytes: {1:N0}.</value></data>
   <data name="ExecutionActivityResetProtected" xml:space="preserve"><value>Recent outputs retain a five-minute publication safety window. To reclaim their remaining space, reset again after five minutes without tool calls.</value></data>
   <data name="ExecutionActivityResetIncomplete" xml:space="preserve"><value>History was reset, but some file cleanup or accounting did not finish. Check remaining space and retry cleanup when the runtime is idle.</value></data>
+  <data name="OwnedManagement_updated" xml:space="preserve"><value>Management data updated.</value></data>
+  <data name="OwnedManagement_trashed" xml:space="preserve"><value>Moved to trash. Source code, repositories and workspaces are unchanged.</value></data>
+  <data name="OwnedManagement_deleted" xml:space="preserve"><value>Management object permanently deleted. Project files are unchanged; execution and approval audits follow their own retention rules.</value></data>
+  <data name="OwnedManagement_busy" xml:space="preserve"><value>Running operations or pending approvals remain. Resolve them first; project files are unchanged.</value></data>
+  <data name="OwnedManagement_request_cancelled" xml:space="preserve"><value>Request cancelled. This object was not processed.</value></data>
+  <data name="OwnedManagement_linked" xml:space="preserve"><value>Linking changes only management relationships, not historical call task_id values.</value></data>
+  <data name="OwnedManagement_default_task_updated" xml:space="preserve"><value>Updated the default task for later calls. Running operations and approval snapshots are unchanged.</value></data>
+  <data name="OwnedManagement_stop_requested" xml:space="preserve"><value>Stop requested. Waiting for the process to exit.</value></data>
+  <data name="OwnedManagement_process_exited" xml:space="preserve"><value>Command process exit confirmed.</value></data>
+  <data name="OwnedManagement_cancel_requested" xml:space="preserve"><value>Cancellation requested. Check the original call for the final effects.</value></data>
+  <data name="OwnedManagement_instance_unavailable" xml:space="preserve"><value>This service has no matching running instance. Verify the actual state of the recorded call.</value></data>
+  <data name="OwnedManagementAction_rename" xml:space="preserve"><value>Rename · {0}</value></data>
+  <data name="OwnedManagementAction_pin" xml:space="preserve"><value>Pin · {0}</value></data>
+  <data name="OwnedManagementAction_unpin" xml:space="preserve"><value>Unpin · {0}</value></data>
+  <data name="OwnedManagementAction_tags" xml:space="preserve"><value>Update tags · {0}</value></data>
+  <data name="OwnedManagementAction_archive" xml:space="preserve"><value>Archive · {0}</value></data>
+  <data name="OwnedManagementAction_unarchive" xml:space="preserve"><value>Unarchive · {0}</value></data>
+  <data name="OwnedManagementAction_trash" xml:space="preserve"><value>Move to trash · {0}</value></data>
+  <data name="OwnedManagementAction_restore" xml:space="preserve"><value>Restore · {0}</value></data>
+  <data name="OwnedManagementAction_delete" xml:space="preserve"><value>Permanently delete · {0}</value></data>
+  <data name="OwnedApprovalReasonCommand" xml:space="preserve"><value>Commands may change files, install software, access the network or control services. Review the actual command and working directory.</value></data>
+  <data name="OwnedApprovalReasonSession" xml:space="preserve"><value>Writing to a command process or stopping sessions may change task execution and requires confirmation.</value></data>
+  <data name="OwnedApprovalReasonFile" xml:space="preserve"><value>File changes apply to the specified target. Review the changes, deletion scope and workspace.</value></data>
+  <data name="OwnedApprovalReasonDefault" xml:space="preserve"><value>This operation may change files, services, devices or external resources. Confirmation is required before execution.</value></data>
+  <data name="OwnedApprovalScopeAccount" xml:space="preserve"><value>Uses the current process OS account permissions. This mode does not elevate privileges or restrict file access inside arbitrary commands.</value></data>
+  <data name="OwnedApprovalScopeWorkspace" xml:space="preserve"><value>Workspace: {0}</value></data>
+  <data name="OwnedApprovalScopeSessions" xml:space="preserve"><value>Fixed sessions to stop: {0}</value></data>
+  <data name="OwnedApprovalScopeTarget" xml:space="preserve"><value>Target: {0}</value></data>
+  <data name="OwnedApprovalScopeExternal" xml:space="preserve"><value>The external MCP service implements its internal effects. Its annotations are not trusted read-only authorization.</value></data>
 </root>

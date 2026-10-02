@@ -37,20 +37,26 @@ public sealed class WorkspaceGroupKey(string id, string title) : INotifyProperty
 	public int ExecutionCount { get; private set; }
 	public int VisibleActivityCount => RecentCount + ExecutionCount;
     public string Id { get; } = id;
-    public string Title { get; private set; } = title;
+    public string Title { get; private set; } = GroupTitle(id, title);
     public string Root { get; private set; } = "";
     public int Total { get; private set; }
     public DateTimeOffset? LastActivityAt { get; private set; }
     public event PropertyChangedEventHandler? PropertyChanged;
     public void Apply(JsonElement value)
     {
-        Title = value.Text("title", Title); Root = value.Text("root");
+        Title = GroupTitle(Id, value.Text("title", Title), value.Text("title_source")); Root = value.Text("root");
         Total = (int)value.Number("total"); LastActivityAt = value.Date("last_activity_at");
 		Mode = value.Text("mode", "auto"); RecentCount = (int)value.Number("recent_count"); ExecutionCount = (int)value.Number("execution_count");
         PropertyChanged?.Invoke(this, new(null));
     }
     public override bool Equals(object? value) => value is WorkspaceGroupKey key && key.Id == Id;
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Id);
+    private static string GroupTitle(string id, string original, string source = "") => id switch
+    {
+        "unattributed" => UiText.Get("ExecutionUnattributedGroup"),
+        "unassigned" => UiText.Get("ExecutionUnassignedProject"),
+        _ => source == "fallback" ? UiText.Get("ExecutionHistoricalWorkspace") : original
+    };
 }
 public sealed record ExecutionChoice(string Id, string Title) { public override string ToString() => Title; }
 
@@ -141,6 +147,8 @@ public sealed class ExecutionObject : INotifyPropertyChanged
         // A user's title is data, even when it happens to equal the old default.
         // The backend's stable title_source identifies product-generated titles.
         if (string.IsNullOrWhiteSpace(title) || (kind == "conversation" && value.Text("title_source") == "fallback")) title = UiText.Format("ExecutionConversationTimestamp", created);
+        if (kind == "conversation" && value.Flag("is_unattributed") && value.Text("conversation_id").Length == 0 && value.Text("id").Length == 0)
+            title = UiText.Get("ExecutionUnidentifiedConversation");
         var workspace = value.Field("state").Text("workspace_id", value.Text("workspace_id"));
         var workspaces = value.Array("workspace_ids");
         if (workspace.Length == 0 && workspaces.Length > 0 && workspaces[0].ValueKind == JsonValueKind.String) workspace = workspaces[0].GetString() ?? "";

@@ -3273,4 +3273,33 @@
   <data name="ExecutionActivityResetDone" xml:space="preserve"><value>Activity 기록을 초기화했습니다. 회수한 출력 용량: {0:N0} 바이트. 남은 출력 용량: {1:N0} 바이트.</value></data>
   <data name="ExecutionActivityResetProtected" xml:space="preserve"><value>최근 출력은 저장 완료를 보호하기 위해 5분간 유지됩니다. 남은 공간까지 회수하려면 도구 호출 없이 5분 뒤 다시 초기화하세요.</value></data>
   <data name="ExecutionActivityResetIncomplete" xml:space="preserve"><value>기록은 초기화했지만 일부 파일 삭제 또는 용량 기록을 완료하지 못했습니다. 남은 용량을 확인하고 실행이 없을 때 정리를 다시 시도하세요.</value></data>
+  <data name="OwnedManagement_updated" xml:space="preserve"><value>관리 데이터를 갱신했습니다.</value></data>
+  <data name="OwnedManagement_trashed" xml:space="preserve"><value>휴지통으로 이동했습니다. 소스 코드·저장소·작업공간은 유지됩니다.</value></data>
+  <data name="OwnedManagement_deleted" xml:space="preserve"><value>관리 항목을 영구 삭제했습니다. 프로젝트 파일은 유지되며 실행·승인 감사 기록에는 별도 보존 규칙이 적용됩니다.</value></data>
+  <data name="OwnedManagement_busy" xml:space="preserve"><value>실행 중인 작업이나 승인 대기가 남아 있습니다. 먼저 실행·승인을 처리하세요. 프로젝트 파일은 유지됩니다.</value></data>
+  <data name="OwnedManagement_request_cancelled" xml:space="preserve"><value>요청이 취소되어 이 항목은 처리하지 않았습니다.</value></data>
+  <data name="OwnedManagement_linked" xml:space="preserve"><value>연결은 관리 관계만 변경합니다. 기존 호출의 task_id는 유지됩니다.</value></data>
+  <data name="OwnedManagement_default_task_updated" xml:space="preserve"><value>이후 호출의 기본 작업을 갱신했습니다. 실행 중인 작업과 승인 스냅샷은 유지됩니다.</value></data>
+  <data name="OwnedManagement_stop_requested" xml:space="preserve"><value>중지를 요청했습니다. 프로세스 종료를 기다립니다.</value></data>
+  <data name="OwnedManagement_process_exited" xml:space="preserve"><value>명령 프로세스 종료를 확인했습니다.</value></data>
+  <data name="OwnedManagement_cancel_requested" xml:space="preserve"><value>취소를 요청했습니다. 최종 변경 결과는 원래 호출 상태를 확인하세요.</value></data>
+  <data name="OwnedManagement_instance_unavailable" xml:space="preserve"><value>현재 서비스에서 해당 실행 인스턴스를 찾을 수 없습니다. 기록된 호출의 실제 상태를 확인하세요.</value></data>
+  <data name="OwnedManagementAction_rename" xml:space="preserve"><value>이름 변경 · {0}</value></data>
+  <data name="OwnedManagementAction_pin" xml:space="preserve"><value>고정 · {0}</value></data>
+  <data name="OwnedManagementAction_unpin" xml:space="preserve"><value>고정 해제 · {0}</value></data>
+  <data name="OwnedManagementAction_tags" xml:space="preserve"><value>태그 변경 · {0}</value></data>
+  <data name="OwnedManagementAction_archive" xml:space="preserve"><value>보관 · {0}</value></data>
+  <data name="OwnedManagementAction_unarchive" xml:space="preserve"><value>보관 해제 · {0}</value></data>
+  <data name="OwnedManagementAction_trash" xml:space="preserve"><value>휴지통 이동 · {0}</value></data>
+  <data name="OwnedManagementAction_restore" xml:space="preserve"><value>복원 · {0}</value></data>
+  <data name="OwnedManagementAction_delete" xml:space="preserve"><value>영구 삭제 · {0}</value></data>
+  <data name="OwnedApprovalReasonCommand" xml:space="preserve"><value>명령은 파일 변경·설치·네트워크 접근·서비스 제어를 수행할 수 있습니다. 실제 명령과 작업 디렉터리를 확인하세요.</value></data>
+  <data name="OwnedApprovalReasonSession" xml:space="preserve"><value>명령 프로세스에 데이터를 쓰거나 세션을 일괄 중지하면 작업 실행에 영향을 줄 수 있으므로 확인이 필요합니다.</value></data>
+  <data name="OwnedApprovalReasonFile" xml:space="preserve"><value>지정한 대상에 파일 변경을 적용합니다. 변경 내용·삭제 범위·작업공간을 확인하세요.</value></data>
+  <data name="OwnedApprovalReasonDefault" xml:space="preserve"><value>이 작업은 파일·서비스·장치·외부 리소스를 변경할 수 있습니다. 실행 전에 확인이 필요합니다.</value></data>
+  <data name="OwnedApprovalScopeAccount" xml:space="preserve"><value>현재 프로세스의 운영체제 계정 권한을 사용합니다. 권한을 높이거나 임의 명령 내부의 파일 접근을 제한하지 않습니다.</value></data>
+  <data name="OwnedApprovalScopeWorkspace" xml:space="preserve"><value>작업공간: {0}</value></data>
+  <data name="OwnedApprovalScopeSessions" xml:space="preserve"><value>중지할 고정 세션 목록: {0}</value></data>
+  <data name="OwnedApprovalScopeTarget" xml:space="preserve"><value>대상: {0}</value></data>
+  <data name="OwnedApprovalScopeExternal" xml:space="preserve"><value>외부 MCP 내부의 변경 동작은 해당 서비스가 구현합니다. 도구 주석을 신뢰할 수 있는 읽기 전용 권한 근거로 취급하지 않습니다.</value></data>
 </root>

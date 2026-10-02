@@ -45,6 +45,53 @@ internal static partial class Program
             Check(OwnedText.Render(descriptor,original,"read_file","user","succeeded")==original,"user label translated by coincidence");
             Check(OwnedText.Render(descriptor,original,"third:read_file","tool","succeeded")==original,"third-party label translated");
             Check(ExecutionObject.From(Json(new{conversation_id="conv-user",title="新对话",title_source="user"}),"conversation").Title=="新对话","user title changed");
+            var unattributed = Json(new{conversation_id="",is_unattributed=true,title="未识别对话 · 独立调用"});
+            Check(ExecutionObject.From(unattributed,"conversation").Title==UiText.Get("ExecutionUnidentifiedConversation"),"unattributed navigation title is raw server text");
+            Check(ExecutionObject.From(Json(new{conversation_id="conv-user",title="未识别对话 · 独立调用",title_source="user"}),"conversation").Title=="未识别对话 · 独立调用","coincidental user title translated");
+            var group=new WorkspaceGroupKey("unattributed","未归属记录");
+            Check(group.Title==UiText.Get("ExecutionUnattributedGroup"),"initial synthetic group title untranslated");
+            group.Apply(Json(new{title="未归属记录",total=1}));
+            Check(group.Title==UiText.Get("ExecutionUnattributedGroup"),"refresh replaced group translation");
+            group=new WorkspaceGroupKey("unassigned","未关联项目");
+            Check(group.Title==UiText.Get("ExecutionUnassignedProject"),"unassigned project title untranslated");
+            group=new WorkspaceGroupKey("wsp_old","历史工作区");
+            group.Apply(Json(new{title="历史工作区",title_source="fallback"}));
+            Check(group.Title==UiText.Get("ExecutionHistoricalWorkspace"),"historical fallback untranslated");
+            group.Apply(Json(new{title="历史工作区",title_source="workspace"}));
+            Check(group.Title=="历史工作区","user workspace name translated");
+            foreach(var action in new[]{"rename","pin","unpin","tags","archive","unarchive","trash","restore","delete"})
+            {
+                var raw=action+" · conv_fixture";
+                var managed=new OwnedTextDescriptor{SchemaVersion=1,Code="management.action."+action,Args=["conv_fixture"],TextHash=Hash(raw)};
+                Check(OwnedText.Render(managed,raw,"conversation."+action,"","succeeded")==UiText.Format("OwnedManagementAction_"+action,"conv_fixture"),"management action untranslated: "+action);
+                Check(OwnedText.Render(managed,raw,"third:conversation."+action,"","succeeded")==raw,"external action acquired trusted presentation");
+                Check(OwnedText.Render(managed,raw,"conversation."+action,"user","succeeded")==raw,"user action label translated");
+            }
+            var busyRaw="仍有关联的运行项或待审批请求，请先停止或处理审批。项目文件未改动。";
+            var busy=new OwnedTextDescriptor{SchemaVersion=1,Code="management.busy",Args=[],TextHash=Hash(busyRaw)};
+            Check(OwnedText.Render(busy,busyRaw,"conversation.trash","","skipped")==UiText.Get("OwnedManagement_busy"),"skipped batch outcome untranslated");
+            Check(OwnedText.Render(busy,busyRaw,"conversation.trash","","succeeded")==busyRaw,"skipped outcome became success");
+            var stopRaw="已确认命令进程退出。";
+            var stop=new OwnedTextDescriptor{SchemaVersion=1,Code="management.process_exited",Args=[],TextHash=Hash(stopRaw)};
+            Check(OwnedText.Render(stop,stopRaw,"call.stop","","succeeded")==UiText.Get("OwnedManagement_process_exited"),"stop result untranslated");
+            Check(OwnedText.Render(stop,stopRaw,"call.stop","","failed")==stopRaw,"failed stop presented as confirmed exit");
+            Check(OwnedText.Render(Json(new{schema_version=1,code=(string?)null,args=Array.Empty<string>(),text_hash=Hash(stopRaw)}),stopRaw,"call.stop","","succeeded")==stopRaw,"null descriptor code crashed or rewrote original");
+            foreach(var pair in new[]{("exec_command","OwnedApprovalReasonCommand"),("session_act","OwnedApprovalReasonSession"),("file_edit","OwnedApprovalReasonFile"),("mcp_tool_call","OwnedApprovalReasonDefault")})
+            {
+                var raw=UiText.Original(pair.Item2);
+                Check(OwnedText.ApprovalReason(pair.Item1,"",raw)==UiText.Get(pair.Item2),"approval reason untranslated");
+                Check(OwnedText.ApprovalReason(pair.Item1,"user_rule",raw)==raw,"user rule explanation translated");
+                Check(OwnedText.ApprovalReason(pair.Item1,"",raw+" 原文")==raw+" 原文","unknown approval reason translated");
+            }
+            var path="D:/原文/한국어.txt";
+            var scope="工作区："+path+"\n当前进程操作系统账户权限；此模式不提升权限，也不限制任意命令内部的文件访问。\n本次停止的固定会话集合：[session_fixture]\n目标："+path+"（file）\n第三方 MCP 的内部副作用由该服务实现，未将其注释当作可信只读授权。";
+            var scopeText=OwnedText.ApprovalScope(scope);
+            Check(scopeText.Contains(path)&&scopeText.Contains("[session_fixture]")&&scopeText.Contains(UiText.Get("OwnedApprovalScopeAccount")),"approval scope changed selectors or failed to translate");
+            Check(scopeText==string.Join("\n",UiText.Format("OwnedApprovalScopeWorkspace",path),UiText.Get("OwnedApprovalScopeAccount"),UiText.Format("OwnedApprovalScopeSessions","[session_fixture]"),UiText.Format("OwnedApprovalScopeTarget",path+"（file）"),UiText.Get("OwnedApprovalScopeExternal")),"scope template was not translated completely");
+            Check(OwnedText.ApprovalScope(scope+"\n用户未知说明")==scope+"\n用户未知说明","partial template changed unknown data");
+            Check(OwnedText.ApprovalScope("用户 原文")=="用户 原文","arbitrary scope changed");
+            if(locale=="ko-KR") foreach(var item in keys.Where(item=>item.Key.StartsWith("OwnedManagement")||item.Key.StartsWith("OwnedApproval")))
+                Check(Regex.IsMatch(UiText.Get(item.Key),"[가-힣]"),"missing Korean owned message: "+item.Key);
             var command=new ActivityEvent{Kind="task.completed",Title="task.user-title",Status="succeeded"};
             Check(ActivityPresentation.EventHeading(command,command.Title).Contains(command.Title),"user title resembling event code hidden");
             var failed="失败：원문 실제 오류";

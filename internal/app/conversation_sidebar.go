@@ -31,6 +31,7 @@ type SidebarRequest struct {
 type SidebarGroup struct {
 	ID             string             `json:"workspace_id"`
 	Title          string             `json:"title"`
+	TitleSource    string             `json:"title_source,omitempty"`
 	Root           string             `json:"root,omitempty"`
 	Total          int                `json:"total"`
 	RecentCount    int                `json:"recent_count"`
@@ -187,8 +188,10 @@ func (r *Runtime) RuntimeConversationSidebar(ctx context.Context, request Sideba
 			return result, err
 		}
 		title := names[id]
+		titleSource := "workspace"
 		if title == "" {
 			title = "历史工作区"
+			titleSource = "fallback"
 		}
 		if id == "unattributed" {
 			title = "未归属记录"
@@ -196,7 +199,7 @@ func (r *Runtime) RuntimeConversationSidebar(ctx context.Context, request Sideba
 		if id == "unassigned" {
 			title = "未关联项目"
 		}
-		group := SidebarGroup{ID: id, Title: title, Root: roots[id], Total: len(items), Conversations: []ConversationItem{}}
+		group := SidebarGroup{ID: id, Title: title, TitleSource: titleSource, Root: roots[id], Total: len(items), Conversations: []ConversationItem{}}
 		mode, limit := request.Modes[id], request.Limits[id]
 		if mode == "" {
 			mode = request.DefaultMode

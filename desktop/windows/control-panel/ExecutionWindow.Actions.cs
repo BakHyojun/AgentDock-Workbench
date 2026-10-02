@@ -139,7 +139,7 @@ public partial class ExecutionWindow
         await LoadObjectsAsync();
         if (_selected is not null) await LoadCallsAsync(false);
         if (DataManagementPanel.Visibility == Visibility.Visible) await LoadManagedAsync(false);
-        if (failed > 0 || skipped > 0) ShowInfo(UiText.Get("ExecutionManagementResult"), UiText.Format("ExecutionBatchResult", succeeded, skipped, failed) + string.Join("\n", outcomes.Where(item => item.Text("status") != "succeeded").Select(item => item.Text("id") + "：" + item.Text("message"))));
+        if (failed > 0 || skipped > 0) ShowInfo(UiText.Get("ExecutionManagementResult"), UiText.Format("ExecutionBatchResult", succeeded, skipped, failed) + string.Join("\n", outcomes.Where(item => item.Text("status") != "succeeded").Select(item => item.Text("id") + "：" + OwnedText.Render(item.Field("message_text"), item.Text("message"), kind + "." + action, "", item.Text("status")))));
         else Warn(UiText.Format("ExecutionUpdatedRecords", succeeded));
     }
     private async Task ChangeLifecycleAsync(string id, string action)

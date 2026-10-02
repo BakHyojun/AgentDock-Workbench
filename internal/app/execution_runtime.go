@@ -52,10 +52,11 @@ type BatchRequest struct {
 	ConfirmPermanent bool     `json:"confirm_permanent,omitempty"`
 }
 type BatchItem struct {
-	ID      string `json:"id"`
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
-	CallID  string `json:"call_id,omitempty"`
+	MessageText *activity.LocalizedText `json:"message_text,omitempty"`
+	ID          string                  `json:"id"`
+	Status      string                  `json:"status"`
+	Message     string                  `json:"message,omitempty"`
+	CallID      string                  `json:"call_id,omitempty"`
 }
 type BatchResult struct {
 	Items     []BatchItem `json:"items"`
@@ -293,7 +294,8 @@ func (r *Runtime) RuntimeManagementBatch(ctx context.Context, kind string, reque
 	}
 	for _, id := range ids {
 		if err := ctx.Err(); err != nil {
-			result.Items = append(result.Items, BatchItem{ID: id, Status: "skipped", Message: "请求已取消，该对象未处理。"})
+			message := "请求已取消，该对象未处理。"
+			result.Items = append(result.Items, BatchItem{ID: id, Status: "skipped", Message: message, MessageText: activity.ManagementMessage(kind+"."+request.Action, "skipped", message)})
 			result.Skipped++
 			continue
 		}
@@ -335,6 +337,7 @@ func (r *Runtime) manageOne(ctx context.Context, kind, id string, change activit
 	item.CallID = binding.CallID
 	finish := func(status, message string) BatchItem {
 		item.Status, item.Message = status, message
+		item.MessageText = activity.ManagementMessage(kind+"."+change.Action, status, message)
 		callStatus := status
 		if status == "skipped" {
 			callStatus = "cancelled"

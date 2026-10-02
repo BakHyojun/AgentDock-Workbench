@@ -308,6 +308,12 @@ func cloneCall(call *ExecutionCall, output bool) ExecutionCall {
 	copied := *call
 	copied.TitleText = call.TitleText.clone()
 	copied.SummaryText = call.SummaryText.clone()
+	// Read-only compatibility for pre-descriptor local management records.
+	// Never rewrite the journal/projection or replace future/stale metadata.
+	described := DescribeManagement(Event{ToolName: copied.ToolName, Title: copied.Title,
+		Summary: copied.Summary, Status: copied.Status, LabelSource: copied.LabelSource,
+		Binding: Binding{Label: copied.Label}, TitleText: copied.TitleText, SummaryText: copied.SummaryText})
+	copied.TitleText, copied.SummaryText = described.TitleText, described.SummaryText
 	copied.Request = call.Request.clone(output)
 	copied.Response = call.Response.clone(output)
 	copied.OutputSource = call.OutputSource.clone(output)

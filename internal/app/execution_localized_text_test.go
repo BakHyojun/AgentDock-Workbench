@@ -71,3 +71,34 @@ func TestLocalizedManagementThroughBatchedAppend(t *testing.T) {
 		t.Fatalf("single append reused success metadata: %+v %v", call, err)
 	}
 }
+
+func TestLocalizedManagementThroughReservedAppend(t *testing.T) {
+	store, err := activity.New(t.TempDir(), activity.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := &Runtime{activity: store, executionInstance: "reserved-localization"}
+	reservation, err := store.ReserveAppend(t.Context(), 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reservation.Close()
+	binding := activity.Binding{CallID: "call_99887766554433221100aabbccddeeff"}
+	for _, event := range []activity.Event{
+		{Binding: binding, Kind: "call.created", ToolName: "permission.update", Title: "修改执行权限"},
+		{Binding: binding, Kind: "call.started", ToolName: "permission.update", Title: "修改执行权限"},
+		{Binding: binding, Kind: "call.completed", ToolName: "permission.update", Status: "succeeded", Summary: "scope=workspace scope_id=wsp_fixture mode=rules revision=2；操作系统权限未改变。"},
+	} {
+		if err := runtime.appendReservedExecution(reservation, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Inspect persisted events, not the compatibility-enriched call projection.
+	page, err := store.Query(t.Context(), activity.Query{CallID: binding.CallID, Limit: 10})
+	if err != nil || len(page.Events) != 3 {
+		t.Fatalf("journal: %+v %v", page, err)
+	}
+	if page.Events[0].TitleText == nil || page.Events[1].TitleText == nil || page.Events[2].SummaryText == nil {
+		t.Fatal("reserved persistence bypassed management descriptors")
+	}
+}

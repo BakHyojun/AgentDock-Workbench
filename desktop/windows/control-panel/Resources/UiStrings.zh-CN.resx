@@ -3273,4 +3273,33 @@
   <data name="ExecutionActivityResetDone" xml:space="preserve"><value>Activity 历史已重置。回收输出容量：{0:N0} 字节。剩余输出容量：{1:N0} 字节。</value></data>
   <data name="ExecutionActivityResetProtected" xml:space="preserve"><value>最近的输出保留五分钟的发布保护期。若要回收剩余空间，请停止工具调用五分钟后再次重置。</value></data>
   <data name="ExecutionActivityResetIncomplete" xml:space="preserve"><value>历史已重置，但部分文件清理或容量记录未完成。请检查剩余容量，并在运行时空闲时重试清理。</value></data>
+  <data name="OwnedManagement_updated" xml:space="preserve"><value>管理数据已更新。</value></data>
+  <data name="OwnedManagement_trashed" xml:space="preserve"><value>已移入回收站，源码、仓库和工作区未改动。</value></data>
+  <data name="OwnedManagement_deleted" xml:space="preserve"><value>管理对象已永久删除；项目文件未改动，执行与审批审计按独立保留规则保存。</value></data>
+  <data name="OwnedManagement_busy" xml:space="preserve"><value>仍有关联的运行项或待审批请求，请先停止或处理审批。项目文件未改动。</value></data>
+  <data name="OwnedManagement_request_cancelled" xml:space="preserve"><value>请求已取消，该对象未处理。</value></data>
+  <data name="OwnedManagement_linked" xml:space="preserve"><value>关联仅影响管理关系，不改写历史调用的 task_id。</value></data>
+  <data name="OwnedManagement_default_task_updated" xml:space="preserve"><value>已更新后续调用的默认任务。运行项和审批快照保持不变。</value></data>
+  <data name="OwnedManagement_stop_requested" xml:space="preserve"><value>已发送停止请求，等待进程退出。</value></data>
+  <data name="OwnedManagement_process_exited" xml:space="preserve"><value>已确认命令进程退出。</value></data>
+  <data name="OwnedManagement_cancel_requested" xml:space="preserve"><value>已发送取消请求，最终副作用结果以原调用状态为准。</value></data>
+  <data name="OwnedManagement_instance_unavailable" xml:space="preserve"><value>当前服务没有该运行实例，请核对已记录调用的实际状态。</value></data>
+  <data name="OwnedManagementAction_rename" xml:space="preserve"><value>重命名 · {0}</value></data>
+  <data name="OwnedManagementAction_pin" xml:space="preserve"><value>置顶 · {0}</value></data>
+  <data name="OwnedManagementAction_unpin" xml:space="preserve"><value>取消置顶 · {0}</value></data>
+  <data name="OwnedManagementAction_tags" xml:space="preserve"><value>更新标签 · {0}</value></data>
+  <data name="OwnedManagementAction_archive" xml:space="preserve"><value>归档 · {0}</value></data>
+  <data name="OwnedManagementAction_unarchive" xml:space="preserve"><value>取消归档 · {0}</value></data>
+  <data name="OwnedManagementAction_trash" xml:space="preserve"><value>移入回收站 · {0}</value></data>
+  <data name="OwnedManagementAction_restore" xml:space="preserve"><value>恢复 · {0}</value></data>
+  <data name="OwnedManagementAction_delete" xml:space="preserve"><value>永久删除 · {0}</value></data>
+  <data name="OwnedApprovalReasonCommand" xml:space="preserve"><value>任意命令可能修改文件、安装软件、访问网络或控制服务，需要确认实际命令与工作目录。</value></data>
+  <data name="OwnedApprovalReasonSession" xml:space="preserve"><value>向命令进程写入数据或批量停止可能改变任务执行，需要确认。</value></data>
+  <data name="OwnedApprovalReasonFile" xml:space="preserve"><value>文件变更将在指定目标执行；请确认修改内容、删除范围及工作区。</value></data>
+  <data name="OwnedApprovalReasonDefault" xml:space="preserve"><value>该操作可能修改文件、服务、设备或外部资源，需要执行前确认。</value></data>
+  <data name="OwnedApprovalScopeAccount" xml:space="preserve"><value>当前进程操作系统账户权限；此模式不提升权限，也不限制任意命令内部的文件访问。</value></data>
+  <data name="OwnedApprovalScopeWorkspace" xml:space="preserve"><value>工作区：{0}</value></data>
+  <data name="OwnedApprovalScopeSessions" xml:space="preserve"><value>本次停止的固定会话集合：{0}</value></data>
+  <data name="OwnedApprovalScopeTarget" xml:space="preserve"><value>目标：{0}</value></data>
+  <data name="OwnedApprovalScopeExternal" xml:space="preserve"><value>第三方 MCP 的内部副作用由该服务实现，未将其注释当作可信只读授权。</value></data>
 </root>
