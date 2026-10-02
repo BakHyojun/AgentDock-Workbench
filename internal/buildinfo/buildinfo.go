@@ -11,7 +11,7 @@ import (
 // Fork version 1.1.<upstream patch>100: this build carries all of upstream
 // Workbench 1.1.8. The fork updates only through Setup, so it need not order
 // above earlier fork builds; published fork versions are never reused.
-const Version = "1.1.8102"
+const Version = "1.1.8103"
 
 // ProductName is the display identity from 1.1.7 onward; machine IDs remain stable.
 const ProductName = "AgentDock Workbench"

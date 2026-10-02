@@ -13,7 +13,7 @@
 | 소스 기준선 | upstream `v1.1.8` 프리릴리스 `4bd778d4077bbe58cfe19e4abb777f660694377b`를 main에 병합한 상태. 이전 기준선은 `v1.1.7` `b367eaab` |
 | 이력 구조 | upstream main의 커밋 전부(뒤진 커밋 0) → upstream main 밖의 기준 태그 병합(`v1.1.8`, 원본 SHA 그대로) → fork 커밋을 기능·결함 수리 단위로 둔다. 2026-09-28 사용자 요청으로 한 번 재구성했다. 이전 이력은 게시 태그 `v1.1.8100`에만 남는다. 이 태그는 CI upgrade 기준 source를 붙잡으므로 옮기거나 지우지 않는다 |
 | 버전 규칙 | `1.1.<upstream patch>100(+수정 번호)`. 현재 게시본 `1.1.8100`(태그 `v1.1.8100`). 게시된 fork 버전(`1.1.6100`, `1.1.8100`)은 재사용하지 않는다. 앱 내 업데이트가 없으므로 이전 fork 버전보다 클 필요는 없다 |
-| 설치파일 소스 버전 | `1.1.8102`: 대형 Activity preview-only 정책과 local Activity 기록 초기화. `1.1.8101` 후보 bytes는 보존한다. clean-clone candidate 빌드와 실제 Setup payload 검증 완료(source `50ae55c3`). 기존 Go 실패 2건을 보존하고 게시·실제 설치·runner 수용은 미실행이다. 현재 전달 상태는 [초기화 핸드오버](activity-history-reset.ko.md)에 있다 |
+| 설치파일 소스 버전 | `1.1.8103`: 관리자 Core 업그레이드의 Installer trial 진입 결함 수정. 빌드·검증 결과와 전달 위치는 [설치 실패 핸드오버](setup-upgrade-trial-failure.ko.md)에 기록한다. `1.1.8101` 및 `1.1.8102` 후보 bytes는 보존한다. 기존 실패 2건과 게시·실제 설치·runner 수용 상태를 분리하여 보고한다 |
 | 버전 선언 위치 | `internal/buildinfo/buildinfo.go`, `desktop/windows/control-panel/AgentDock.ControlPanel.csproj`. `go run ./tools/release version`과 `verify-version v<ver>`로 확인 |
 | 업데이트 | Setup으로만 한다. 트레이·창의 업데이트 항목은 fork Releases 페이지 안내만 하고, `agentdock update`는 `--local-archive`만 허용한다 |
 | 배포 대상 | Windows x64 Setup만. arm64·macOS·Linux·Android 코드는 업스트림 그대로 두고 빌드하거나 게시하지 않는다 |
@@ -25,6 +25,7 @@ v1.1.8 대비 fork 차이는 아래 영역뿐이다. 새 차이를 만들면 이
 
 | 영역 | 소유 파일 | 불변식 | 회귀 시험 |
 |---|---|---|---|
+| 관리자 Core 설치 trial | `cmd/agentdock-shim/main_windows.go`의 `installerHostEntry`, 기존 native host의 root 검사 후 admission | 기존 `--run-core-task --runtime-root <stable root>`만 live Installer 검사를 요청한다. id/version/root/start·health/실제 lock 보호를 유지하고 일반 UI·management를 허용하지 않는다. 기존 task 등록 형식과 WPF host·Job lifetime 유지 | `installer_host_windows_test.go`: 실제 GUI/CUI shim → 유한 generation fixture, trial start/health·committed·native 진입, 잘못된 root/id/phase·owner 종료·UI 거부, child exit 보존. [상세](setup-upgrade-trial-failure.ko.md) |
 | 내장 인터페이스 OFF 검증 | 기존 `internal/config/display.go`, `internal/mcp/presentation.go`, `response_additions.go`, 제어판 `MainWindow.Display.cs` (실행 코드 변경 없음) | hot reload는 도구 실행·외부 MCP 연결을 유지한다. host cache 채택은 unknown, 이전 URI는 30분 한정 안내 응답. ChatGPT 연결 Refresh 후 새 대화로 표시를 확인해야 한다 | `display_dynamic_test.go`: stateless HTTP, 갱신하지 않은 host 목록, in-flight OFF, 외부 성공/오류 보존. [판단·미확인 경계](embedded-interface-toggle.ko.md) |
 | 배포 정체성 | `internal/selfupdate/update.go` `defaultReleaseAPI`; `scripts/install/install.ps1` `Get-ReleaseBaseUrl`; `packaging/windows/AgentDock.iss` `App*URL`; workflow `github.repository == 'eerraa/AgentDock-Workbench'` 조건; `packaging/windows/build-windows-release.ps1` build report `upstream_version/upstream_commit` | 세 대상 파일에 업스트림 소유자 주소(`a-m-o-r-f-a-t-i/`, 대소문자 무관)가 없다. build report의 기준선 커밋은 AGENTS.md와 같다 | `scripts/test/fork_windows_release_test.go` |
 | Setup 전용 업데이트 | `cmd/agentdock/main.go` `errForkUpdateThroughSetup`; `cmd/agentdock/server.go` usage; `desktop/windows/control-panel/App.xaml.cs` `CheckForUpdatesAsync`, `_releasesPromptOpen` | 온라인 확인·다운로드는 네트워크·generation 접근 전에 거부한다. `internal/selfupdate` 패키지, `--local-archive`, 시작 시 데스크톱 복구, 업데이트 transaction 재개 UI는 유지한다 | `cmd/agentdock/main_test.go`, `scripts/test/desktop_windows_test.go` |
@@ -89,7 +90,7 @@ Setup receipt 공유 위반 대기는 업스트림 `internal/desktopruntime/setu
 | 구분 | 내용 |
 |---|---|
 | 알려진 제약 | `--local-archive`와 데스크톱 복구는 실행 중인 Core의 rg pin으로 payload를 검사하므로, rg pin 변경은 Setup으로만 배포한다. selfupdate의 구형 flat 이관(`PrepareWindowsLegacyGeneration`)은 rg를 복사하지 않는다. fork 설치로는 이 경로에 닿지 않는다. 시작 시 복구는 Core·Tray 버전이 다를 때만 Core 시작마다 GitHub API를 1회 조회하고, 아무것도 바꾸지 않는다. `RuntimeService`의 온라인 업데이트 메서드는 호출되지 않지만 업스트림 계약 시험 때문에 남아 있다. `rules` 모드에서 사용자가 승인한 호출의 결과는 모델에 돌아가지 않는다(모델은 다시 관찰해야 한다). ChatGPT가 MCP 이미지 결과를 모델에게 보여 주는지는 실제 연결로 확인해야 한다 |
-| 확인된 설치 결함 (미수정) | 1.1.8102 관리자 Core의 기존 설치 업그레이드: stable tray `--run-core-task`가 live Installer trial 허용 역할에서 빠져 Core 시작 전 종료 → 120초 health 실패. shipped shim의 disposable fixture로 재현했다. 설정 삭제·Activity quota 문제로 취급하지 않는다. [증거·수정 경계](setup-upgrade-trial-failure.ko.md) |
+| 설치 진단 한계 | Core task가 시작 전에 종료되어도 `startCore`는 120초 health 실패로만 표시한다. trial 진입 결함은 1.1.8103에서 수정하지만 task 조기 종료 stderr/status 수집 개선은 별도 P1이다. 실제 isolated Setup 수용은 Actions 차단과 구분해 미실행으로 기록한다. [증거·수정 경계](setup-upgrade-trial-failure.ko.md) |
 | 게시 자산 | 로컬 게시는 `AgentDockSetup-amd64.exe`, `build-report.json`, `verification-scope.json`과 각 `.sha256`만 올린다(ZIP·`install.ps1` 제외). CI의 `windows-package.yml` 게시 경로와 검증기는 아직 10개 기준이다. CI로 게시하려면 먼저 맞춘다 |
 | 보류 후보 (요청 시만) | 메인 창 활동 요약 주기 갱신, 비JSON health 수용, Core 정지 중 버전 표시 프로세스 반복, 상태 조회 실패의 '중지됨' 표시, 앱 밖 Tailscale 주소 변경 시 캐시 혼합, 생성 후 Job 할당 틈, 관리자 작업 UAC 재시도, tunnel configure 롤백, 폴더 보안 재설정 성능, 브라우저 시작 20초 제한 |
 | upstream 1.1.8 이후 미반영 | PR #22 (`0591339a`: 시작 시 DACL이 이미 같으면 재설정 생략 + 시작 단계 시간 기록 → '폴더 보안 재설정 성능'과 겹침; `f1df7381`: 설치 스테이징 분리·launcher rollback journal; `813e7d5f`: 스트리밍 복사). PR #21: 설치 파일만 게시. 재현되는 것만 채택한다 |

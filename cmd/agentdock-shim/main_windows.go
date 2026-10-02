@@ -79,7 +79,7 @@ func run() error {
 		return err
 	}
 	tray := strings.EqualFold(filepath.Base(executable), updateengine.StableTrayShimName)
-	active, err := resolveActiveWithRecovery(root, store, layout, !tray && coreLaunchRequiresParentLifetime(os.Args[1:]))
+	active, err := resolveActiveWithRecovery(root, store, layout, installerHostEntry(root, tray, os.Args[1:]))
 	if err != nil {
 		return err
 	}
@@ -174,6 +174,20 @@ func coreLaunchRequiresParentLifetime(args []string) bool {
 	return len(args) >= 2 &&
 		strings.EqualFold(strings.TrimSpace(args[0]), "service") &&
 		strings.EqualFold(strings.TrimSpace(args[1]), "launch-core")
+}
+
+// The existing elevated task enters through the GUI shim before its WPF host
+// launches Core. Authorize only that exact task contract for this stable root;
+// a flag elsewhere in ordinary UI/management arguments is not a host identity.
+// resolveActiveWithRecovery still requires a matching live Installer journal.
+func installerHostEntry(root string, tray bool, args []string) bool {
+	if !tray {
+		return coreLaunchRequiresParentLifetime(args)
+	}
+	return len(args) == 3 &&
+		strings.EqualFold(args[0], "--run-core-task") &&
+		strings.EqualFold(args[1], "--runtime-root") &&
+		filepath.IsAbs(args[2]) && sameWindowsPath(args[2], root)
 }
 
 func shimChildRequiresParentLifetime(tray bool, args []string) bool {

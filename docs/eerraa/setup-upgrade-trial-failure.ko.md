@@ -4,7 +4,7 @@
 
 **관리자 Core 모드의 기존 설치 업그레이드에서 stable tray 예약 작업이 Installer trial을 허용받지 못하는 구현 결함을 확인했다.** 1.1.8102에 포함된 실제 tray shim으로 독립 재현했다. 기존 설정 손상이나 Activity quota를 원인으로 볼 증거는 없다. `recovered abandoned runtime lock`은 정상 복구 안내이며 직접 실패가 아니다.
 
-이번 요청은 원인 추적이다. 실행 코드 수정·신규 설치파일 빌드·운영 설치/복구/재시작을 수행하지 않았다. 원래 Activity 현장 조사 A–G의 원본 머신 로그를 재확인한 것도 아니다. 여기의 현장 증거는 사용자가 이번에 실행한 Setup의 **현재 PC 설치 로그**다.
+원래 Activity 현장 조사 A–G의 원본 머신 로그를 재확인한 것은 아니다. 여기의 현장 증거는 사용자가 실행한 Setup의 **현재 PC 설치 로그**다. 후속 사용자 요청으로 아래 1.1.8103 수정과 신규 설치파일을 준비하며, 운영 설치/복구/재시작은 수행하지 않는다.
 
 ## 현장 증거
 
@@ -46,3 +46,19 @@
 - 배포: 수정한 새 bytes는 8102 후보를 덮지 않고 새 버전(다음 후보 1.1.8103)에 배정한다. 기존 Setup 파일/실패 증거를 보존한다. 설치/업그레이드 acceptance는 실제 isolated runner/VM에서만 수행한다. Actions 차단 유지.
 
 현재 로그만으로 사용자 데이터 손실은 확인되지 않았고 설정을 삭제할 근거도 없다. active pointer rollback을 Core 정상 실행으로 오해하지 않아야 한다. 운영 복구/재시작은 이번 조사에서 수행하지 않았다.
+
+## 1.1.8103 수정
+
+`installerHostEntry`가 기존 tray 예약 작업의 정확한 인자 세 개와 absolute runtime root가 stable shim root와 일치하는지 확인한 뒤 기존 live Installer 검사를 요청한다. Core service-host의 기존 경로는 유지한다. 별도 기존 native task host도 executable/root 확인 후 같은 admission을 요청한다. `liveInstallerTrial`의 id/version/root/start·health/lock 검사, 일반 tray·management 거부, task 등록 문자열과 WPF host 및 Job lifetime은 유지한다. 조기 commit과 설정 이관/삭제는 없다.
+
+`installer_host_windows_test.go`는 실제 production GUI/CUI shim을 빌드하고 generation 자식만 유한 native fixture로 대체한다. 이는 installer/Task Scheduler acceptance가 아니다. start/health/committed/native task의 target 도달 및 실제 자식 exit 7 보존, owner가 종료된 trial, 잘못된 id/root/phase, 일반 background/UI 및 management에 끼워 넣은 task flag 거부와 active pointer 불변을 검증한다. 기존의 보안 거부 단언은 유지한다.
+
+### 소스 최종 검증
+
+- `go test ./... -count=1`: shim(실제 런처 fixture 포함), installer, desktopruntime, Activity, app, MCP 및 scripts 시험 통과. 전체 suite는 기존 기준선에서도 재현한 두 실패 때문에 실패 상태다. `TestManagedTaskFirstPage1000`은 2초 목표 대비 5,144.8866 ms, `TestSearchTextRGExitCodes`는 예상 `SEARCH_FAILED` 대비 사전 검증 `INVALID_REGEX`다. 실패 단언/로그를 유지했고 이번 설치 수정과 무관한 코드와 시험은 바꾸지 않았다. 로그 `%TEMP%/agentdock-8103-go-final.log`.
+- Go formatting, `go vet ./...`, `verify-version v1.1.8103`, `git diff --check` 통과.
+- Release desktop build 경고·오류 0, pure policy 923 assertions, 한국어 6,942 assertions, native 계약 32+40+99 assertions 통과. 실제 예약 작업이나 UI·설치·권한 변경은 실행하지 않았다.
+- 한국어 첫 실행은 desktop 동시 빌드의 공유 obj 잠금(CS2012)으로 실패했고, 재시도 한 번은 잘못 입력한 프로젝트 경로(MSB1009)로 실패했다. 순차 실행과 실제 프로젝트 경로로 통과했다. 세 로그 `agentdock-8103-localization-final.log`, `agentdock-8103-localization-recheck.log`, `agentdock-8103-localization-recheck-2.log`를 보존한다. 제품 코드로 우회하지 않았다.
+- WPF offscreen, 실제 isolated Setup/기존 설정 보존 업그레이드·rollback, Linux/race 수용은 미실행이다. 새 파일은 로컬 candidate이며 GitHub 게시와 게시 자산 재다운로드는 별개로 미실행이다.
+
+최종 산출물 identity는 clean clone 빌드와 payload 확인 후 추가한다.

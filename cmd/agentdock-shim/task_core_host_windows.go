@@ -62,7 +62,9 @@ func runTaskCoreHost(args []string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	active, err := resolveActiveWithRecovery(runtimeRoot, store, layout)
+	// Executable identity and its runtime root were checked above. This Core
+	// host has the same live Installer admission contract as the existing task.
+	active, err := resolveActiveWithRecovery(runtimeRoot, store, layout, true)
 	if err != nil {
 		return 1, err
 	}
