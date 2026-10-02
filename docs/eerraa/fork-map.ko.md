@@ -13,7 +13,7 @@
 | 소스 기준선 | upstream `v1.1.8` 프리릴리스 `4bd778d4077bbe58cfe19e4abb777f660694377b`를 main에 병합한 상태. 이전 기준선은 `v1.1.7` `b367eaab` |
 | 이력 구조 | upstream main의 커밋 전부(뒤진 커밋 0) → upstream main 밖의 기준 태그 병합(`v1.1.8`, 원본 SHA 그대로) → fork 커밋을 기능·결함 수리 단위로 둔다. 2026-09-28 사용자 요청으로 한 번 재구성했다. 이전 이력은 게시 태그 `v1.1.8100`에만 남는다. 이 태그는 CI upgrade 기준 source를 붙잡으므로 옮기거나 지우지 않는다 |
 | 버전 규칙 | 기본 `1.1.<upstream patch>100(+수정 번호)`. 이번 한국어 보완은 사용자 지정 `1.1.8200`을 사용하며 upstream 기준선은 여전히 `1.1.8`이다. 현재 게시본 `1.1.8100`(태그 `v1.1.8100`). 게시된 fork 버전(`1.1.6100`, `1.1.8100`)은 재사용하지 않는다 |
-| 설치파일 소스 버전 | `1.1.8200`: 한국어 표시 경로 보완. 범위·검증·전달 identity는 [한국어 보완 핸드오버](korean-presentation-completion.ko.md)에 기록한다. `1.1.8101`·`1.1.8102`·`1.1.8103` 후보 bytes와 실패 기록은 보존한다. 실제 설치·isolated runner 수용·Release 게시와 자산 재다운로드를 빌드와 구분한다 |
+| 설치파일 소스 버전 | `1.1.8200`: 한국어 표시 경로 보완, clean-clone 로컬 x64 후보 빌드와 실제 Setup payload·한국어 리소스 확인 완료. 범위·검증·전달 identity는 [한국어 보완 핸드오버](korean-presentation-completion.ko.md)에 기록한다. `1.1.8101`·`1.1.8102`·`1.1.8103` 후보 bytes와 실패 기록은 보존한다. 실제 설치·isolated runner 수용·Release 게시와 자산 재다운로드는 미실행이다 |
 | 버전 선언 위치 | `internal/buildinfo/buildinfo.go`, `desktop/windows/control-panel/AgentDock.ControlPanel.csproj`. `go run ./tools/release version`과 `verify-version v<ver>`로 확인 |
 | 업데이트 | Setup으로만 한다. 트레이·창의 업데이트 항목은 fork Releases 페이지 안내만 하고, `agentdock update`는 `--local-archive`만 허용한다 |
 | 배포 대상 | Windows x64 Setup만. arm64·macOS·Linux·Android 코드는 업스트림 그대로 두고 빌드하거나 게시하지 않는다 |

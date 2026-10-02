@@ -21,3 +21,14 @@
 - 로그: `%TEMP%/agentdock-8200-desktop-build.log`, `agentdock-8200-desktop-policy.log`, `agentdock-8200-localization-final.log`, `agentdock-8200-localization-final-review.log`, `agentdock-8200-vet-final.log`. Windows desktop 빌드는 순차 실행하여 공유 obj 충돌을 피했다.
 - 회귀는 explicit disposable Activity/HTTP fixture와 UI 없는 실제 모델을 사용했다. old list/detail/update query의 번역 정보, journal 원문·sequence 불변, 실제 reserved events에 metadata 저장, 외부/사용자/unknown/future metadata 보호와 skipped·failed/stop 구분을 검증했다. 승인 template 경로·세션 ID 보존과 unknown 전체 template 원문 fallback을 en/zh-CN/ko-KR에서 확인했다.
 - 실제 isolated runner의 WPF 화면/Setup 설치·업그레이드·rollback, Linux/race 수용은 미실행이다. 로컬 후보 생성과 전체 installer 수용은 별도 상태다.
+
+## 설치파일 identity와 payload 확인
+
+- 파일: `D:/Engineering/release/agentdock-1.1.8200-0383a90d/release/AgentDockSetup-amd64.exe` (Windows x64, 112,690,821 bytes).
+- SHA-256: `4f8224875f68d858dd719c95657a0122c313ccf59f32d03ba13708bd3ce3621d`. 같은 폴더의 `.sha256`, `build-report.json`, `verification-scope.json`에 identity와 수행/미수행 범위를 기록했다.
+- 빌드 source: `0383a90d252ec8e924a166254c7db1e09437bf90`, 깨끗한 새 일반 clone `D:/Engineering/release/agentdock-1.1.8200-0383a90d-source`. 사용자 지정 버전 `1.1.8200`, 채널 `candidate-not-released`. 이 전달 문서 커밋은 실행파일의 source identity를 변경하지 않는다.
+- AgentDock/Setup은 unsigned이며 번들 cloudflared의 Authenticode는 Valid다. Inno 공식 Korean.isl의 obsolete font 경고 4개는 유지됐다. 제어판 빌드 경고/오류는 0이다.
+- Setup을 실행하지 않고 innounp로 추출했다. 내장 ZIP SHA-256 `6607b6aa925b68928ab3baac58c8ca99dbef86554d6b00bf6c3737eb1d711300`이 외부 payload와 동일하다. 실제 내장 tray의 desktop assembly·ko-KR satellite bytes가 clean-clone 빌드와 일치하며, 그 satellite를 ResourceReader로 읽어 1,171키와 새 29키의 한글을 확인했다. 스크린샷 문구는 `귀속되지 않은 기록`, `식별되지 않은 대화 · 독립 호출`, `실행 권한 변경`이다.
+- 내장 rg 15.2.0 파일 5개와 CUA 플러그인 파일 4개, shim bytes와 cloudflared bytes, Setup 한국어 선택을 확인했다. 패키지 검증기는 실제 packaged Core 버전/commit과 desktop source identity, PE x64, checksum을 확인하고 임시 Skill/plugin home에서 fresh/repeat bootstrap을 검증했다. 운영 runtime/설정은 사용하지 않았다.
+- payload 증거: `D:/Engineering/release/agentdock-1.1.8200-0383a90d/payload-evidence.json`. 로그: `%TEMP%/agentdock-8200-release-build.log`, `agentdock-8200-assets-final.log`, `agentdock-8200-unpack.log`, `agentdock-8200-assets-metadata-final.log`.
+- GitHub Release 게시와 게시 자산 재다운로드는 하지 않았다. 저장소 Actions `enabled=false`를 유지한다. 이전 후보 설치파일 bytes는 변경하지 않았다. 로컬 후보 전달은 실제 isolated Windows 설치 수용을 의미하지 않는다.
