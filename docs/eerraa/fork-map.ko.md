@@ -13,7 +13,7 @@
 | 소스 기준선 | upstream `v1.1.8` 프리릴리스 `4bd778d4077bbe58cfe19e4abb777f660694377b`를 main에 병합한 상태. 이전 기준선은 `v1.1.7` `b367eaab` |
 | 이력 구조 | upstream main의 커밋 전부(뒤진 커밋 0) → upstream main 밖의 기준 태그 병합(`v1.1.8`, 원본 SHA 그대로) → fork 커밋을 기능·결함 수리 단위로 둔다. 2026-09-28 사용자 요청으로 한 번 재구성했다. 이전 이력은 게시 태그 `v1.1.8100`에만 남는다. 이 태그는 CI upgrade 기준 source를 붙잡으므로 옮기거나 지우지 않는다 |
 | 버전 규칙 | `1.1.<upstream patch>100(+수정 번호)`. 현재 게시본 `1.1.8100`(태그 `v1.1.8100`). 게시된 fork 버전(`1.1.6100`, `1.1.8100`)은 재사용하지 않는다. 앱 내 업데이트가 없으므로 이전 fork 버전보다 클 필요는 없다 |
-| 설치파일 소스 버전 | `1.1.8102`: 대형 Activity preview-only 정책과 local Activity 기록 초기화. `1.1.8101` 후보 bytes는 보존한다. 구현·검사·패키징·게시·설치 수용은 별도 상태이며 현재 전달 상태는 [초기화 핸드오버](activity-history-reset.ko.md)에 있다 |
+| 설치파일 소스 버전 | `1.1.8102`: 대형 Activity preview-only 정책과 local Activity 기록 초기화. `1.1.8101` 후보 bytes는 보존한다. clean-clone candidate 빌드와 실제 Setup payload 검증 완료(source `50ae55c3`). 기존 Go 실패 2건을 보존하고 게시·실제 설치·runner 수용은 미실행이다. 현재 전달 상태는 [초기화 핸드오버](activity-history-reset.ko.md)에 있다 |
 | 버전 선언 위치 | `internal/buildinfo/buildinfo.go`, `desktop/windows/control-panel/AgentDock.ControlPanel.csproj`. `go run ./tools/release version`과 `verify-version v<ver>`로 확인 |
 | 업데이트 | Setup으로만 한다. 트레이·창의 업데이트 항목은 fork Releases 페이지 안내만 하고, `agentdock update`는 `--local-archive`만 허용한다 |
 | 배포 대상 | Windows x64 Setup만. arm64·macOS·Linux·Android 코드는 업스트림 그대로 두고 빌드하거나 게시하지 않는다 |

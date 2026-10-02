@@ -41,4 +41,20 @@
 - `go vet ./...`, 변경 Go 파일 gofmt, `git diff --check`, `verify-version v1.1.8102` 통과.
 - Desktop pure policy 923개 단언, 한국어 presentation 6,942개 단언, 실제 ActivityClient reset 계약 통과. control-panel 및 layout 프로젝트 Release build 경고/오류 0.
 - 로그: `%TEMP%/agentdock-history-reset-{go-final,boundary-final,focused-final,storage-final,vet,desktop-build,desktop-policy,client-contract,localization,layout-build}.log`. 실패 로그를 그대로 보존한다.
-- 후보 Setup 패키징·자산 검증은 준비 단계다. GitHub 게시와 실제 설치·업그레이드·WPF runner 수용·Linux race는 실행하지 않았다. 긴 삭제 확인 설명의 큰 글꼴 회귀 시험은 `ActivityResetDialogTests`에 추가했으며 현재는 build만 가능하고 실제 실행은 runner 관문에 남는다. 운영 Core/설치/원본 로그는 변경하지 않았다.
+- 후보 Setup 패키징·자산·metadata checksum 검증 완료. GitHub 게시와 실제 설치·업그레이드·WPF runner 수용·Linux race는 실행하지 않았다. 긴 삭제 확인 설명의 큰 글꼴 회귀 시험은 `ActivityResetDialogTests`에 추가했으며 현재는 build만 가능하고 실제 실행은 runner 관문에 남는다. 운영 Core/설치/원본 로그는 변경하지 않았다.
+
+## 사용할 후보 설치파일
+
+| 항목 | 검증된 상태 |
+|---|---|
+| 버전 / channel | `1.1.8102` / `candidate-not-released` |
+| 소스 | clean normal clone `D:/Engineering/release/agentdock-1.1.8102-50ae55c3-source`, commit `50ae55c3f78f2044238056183d672fa817c59506` |
+| Setup | `D:/Engineering/release/agentdock-1.1.8102-50ae55c3/release/AgentDockSetup-amd64.exe`, 112,770,047 bytes |
+| Setup SHA256 | `361b83190ed4ec12885e16301035e2b216d6bc02eb1f4c4fbdef91c7ebeb4323` |
+| 실제 payload | Setup을 실행하지 않고 pinned Inno unpacker로 추출. 내장 ZIP이 검증 ZIP과 동일. 실제 tray에 source main DLL과 한국어 satellite의 정확한 bytes 포함. 한국어 1,142 keys 및 초기화 7 keys, rg 5 files, CUA plugin 4 files 검증. packaged Core bootstrap도 통과 |
+| 서명 | AgentDock/Setup unsigned, 내장 공식 cloudflared Valid |
+| 빌드 경고 | 공식 Korean.isl의 구형 font directive 4건. 컴파일 성공; 공식 원문을 수정하지 않음 |
+| 증거 | 설치파일 옆 `build-report.json`, `verification-scope.json`과 각 checksum. root `payload-evidence.json`. scope에 기존 실패 2건, symlink skip, 미실행 수용 관문을 기록 |
+| 폐기하지 않은 후보 | `D:/Engineering/release/agentdock-1.1.8102`의 `85e007c8` 빌드는 큰 글꼴 확인 창 보강 이전이다. 사용할 후보는 위 `50ae55c3` 경로다. `1.1.8101` 후보도 bytes 그대로 보존 |
+
+이번 전달 이후 새로운 소스 bytes에는 새 수정 버전을 배정한다. 문서-only 후속 commit은 위 설치파일의 source identity를 바꾸지 않는다. Actions `enabled=false`를 유지하며, installer를 운영 PC에서 실행하거나 release를 게시하지 않았다.
