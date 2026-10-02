@@ -17,6 +17,17 @@
 - 기존 이력을 삭제하거나 migration/GC/eviction/압축/CUA response 변경/자동 polling 변경을 추가하지 않는다. 이미 포화된 원본 PC 저장소는 이 변경으로 회수되지 않는다. continuation source와 작은 payload도 계속 전체 quota를 소비한다.
 - 새 상태·정책 설명과 체크박스는 영어/중국어/한국어 공통 resource에 추가한다. 구형 UI는 새 상태를 알 수 없으므로 Core와 제어판은 같은 배포로 제공해야 한다. debug=true 파일은 신형에서 읽지만 필드를 모르는 구형 strict reader로 downgrade하면 설정 경고가 발생할 수 있다. false는 디스크에서 생략한다.
 
+## 설치파일 준비 상태
+
+- Windows x64 **1.1.8101** 미게시 후보: `D:/Engineering/release/agentdock-1.1.8101/release/AgentDockSetup-amd64.exe` (112,727,744 bytes).
+- 설치파일의 소스는 `a74a5ced8e9330a19de5cb7f3ffe13936522800c`다. 기능 구현 `7872a12a` 이후 변경은 두 버전 선언과 fork map뿐이다. 새 일반 clone에서 source-clean 상태로 기존 `build-windows-release.ps1 -Architectures amd64 -Candidate`를 사용했다.
+- Setup SHA-256: `03ddc2f54034bfd4fda6540aac46368f1b8a4ce1f553f0a006fe148f1fe57707`. 같은 폴더의 `.sha256`, `build-report.json`, `verification-scope.json`과 각 checksum을 함께 보존한다.
+- 기존 자산 검증기 `verify-windows-release-assets.ps1 -IncludeMetadata`가 source/version/PE architecture/체크섬/rg 5개 파일/실제 Core skill·CUA plugin bootstrap을 임시 home에서 검증했다. Setup은 실행하지 않았다.
+- 별도 unpacker로 **완성된 Setup**을 수동 설치 없이 추출했다. 안의 ZIP은 검증한 payload ZIP과 SHA-256이 같으며 cloudflared도 원본과 같다. 실제 Setup의 Korean 메시지, ZIP의 rg/CUA 파일, 실제 single-file tray 안의 현재 desktop assembly와 한국어 satellite assembly의 바이트 일치를 확인했다. satellite의 1,135 resource와 새 preview/debug 한국어 값도 확인했다.
+- AgentDock/Setup은 **unsigned**, 포함된 공식 cloudflared 서명은 **Valid**다. 공식 `Korean.isl`의 obsolete font 지시문 네 개 경고는 원문을 유지하며 컴파일에 성공했다.
+- 설치·업그레이드·운영 Core 교체/재시작·runner WPF acceptance·Linux/race·GitHub Release 게시·게시 자산 redownload는 실행하지 않았다. 전체 Go suite의 기준선 실패 두 건은 아래에 그대로 보존했다. 후보 준비와 정식 release acceptance를 혼동하지 않는다.
+- 빌드 및 자산/내용 검사 로그는 `D:/Engineering/release/agentdock-1.1.8101/`에 있다. unpacker 출처와 hash도 `verification-scope.json`에 기록한다. 게시하려면 이 metadata의 미실행 관문을 실제 isolated runner evidence로 채워야 한다.
+
 ## 1 Executive Summary
 
 - **B:** 소규모 large capture 정책과 저장 상태 표시를 단기에 구현한다. quota 증설/configuration/warning은 후속 검토 대상으로 남긴다.
@@ -296,7 +307,7 @@ TTL 만료를 우선하고 byte high-water 초과 때 oldest-first로 low-water�
 - `go vet ./...` 통과. `gofmt -l` 관련 디렉터리 출력 없음, `git diff --check` 통과. 세 언어 resource 1,135 keys 동일, 핸드오버의 상대 링크와 21개 섹션 검사 통과.
 - 새 시험은 256 KiB 경계/indented bytes/redaction, 약 2.7 MB 응답 반복과 blob I/O 차단, preview journal replay, 기존 debug 상세 보존, 16 MiB 안전 한도, 설정 defaults/corruption/cancel/rejected atomic write/revision, concurrent conversations와 unattributed/no-task 호출, 실패 결과 보존, normal/debug admission snapshot과 adapter final envelope, protected continuation source, SDK/Invoke 원문 전달과 UI 상태를 검증한다.
 - 최종 로그는 검토 머신의 `%TEMP%/agentdock-activity-{go-final,baseline-failures,desktop-build,desktop-policy,localization,layout-build,vet}.log`에 남긴다. 필요한 실패 내용은 위에 보존했다. 실제 원본 PC의 로그가 아니다.
-- 소스 구현과 검증만 수행했다. Setup 패키징·서명·설치·운영 Core 교체/재시작·게시·자산 재다운로드는 수행하지 않았으므로 실제 배포 payload의 한국어/rg 내용과 checksum은 이번 단계에서 검증하지 않았다.
+- 구현 회귀검사 단계에서는 소스 구현과 검증만 수행했다. 이후 별도 설치파일 준비 단계의 패키징·실제 payload·checksum 결과와 미실행 관문은 위의 설치파일 준비 상태에 기록한다.
 
 
 
