@@ -51,7 +51,7 @@
 
 `installerHostEntry`가 기존 tray 예약 작업의 정확한 인자 세 개와 absolute runtime root가 stable shim root와 일치하는지 확인한 뒤 기존 live Installer 검사를 요청한다. Core service-host의 기존 경로는 유지한다. 별도 기존 native task host도 executable/root 확인 후 같은 admission을 요청한다. `liveInstallerTrial`의 id/version/root/start·health/lock 검사, 일반 tray·management 거부, task 등록 문자열과 WPF host 및 Job lifetime은 유지한다. 조기 commit과 설정 이관/삭제는 없다.
 
-`installer_host_windows_test.go`는 실제 production GUI/CUI shim을 빌드하고 generation 자식만 유한 native fixture로 대체한다. 이는 installer/Task Scheduler acceptance가 아니다. start/health/committed/native task의 target 도달 및 실제 자식 exit 7 보존, owner가 종료된 trial, 잘못된 id/root/phase, 일반 background/UI 및 management에 끼워 넣은 task flag 거부와 active pointer 불변을 검증한다. 기존의 보안 거부 단언은 유지한다.
+`installer_host_windows_test.go`는 실제 production GUI shim을 빌드해 stable GUI/Core 이름으로 배치하고 generation 자식만 유한 native fixture로 대체한다. 이는 installer/Task Scheduler acceptance가 아니다. start/health/committed/native task의 target 도달 및 실제 자식 exit 7 보존, owner가 종료된 trial, 잘못된 id/root/phase, 일반 background/UI 및 management에 끼워 넣은 task flag 거부와 active pointer 불변을 검증한다. 기존의 보안 거부 단언은 유지한다. 아래 최종 payload 확인에서는 실제 패키징된 GUI/CUI 각각을 사용했다.
 
 ### 소스 최종 검증
 
@@ -61,4 +61,14 @@
 - 한국어 첫 실행은 desktop 동시 빌드의 공유 obj 잠금(CS2012)으로 실패했고, 재시도 한 번은 잘못 입력한 프로젝트 경로(MSB1009)로 실패했다. 순차 실행과 실제 프로젝트 경로로 통과했다. 세 로그 `agentdock-8103-localization-final.log`, `agentdock-8103-localization-recheck.log`, `agentdock-8103-localization-recheck-2.log`를 보존한다. 제품 코드로 우회하지 않았다.
 - WPF offscreen, 실제 isolated Setup/기존 설정 보존 업그레이드·rollback, Linux/race 수용은 미실행이다. 새 파일은 로컬 candidate이며 GitHub 게시와 게시 자산 재다운로드는 별개로 미실행이다.
 
-최종 산출물 identity는 clean clone 빌드와 payload 확인 후 추가한다.
+### 전달 산출물
+
+- Setup: `D:/Engineering/release/agentdock-1.1.8103-7a995724/release/AgentDockSetup-amd64.exe` (112,687,762 bytes).
+- SHA256: `f2fca8fdf988efb352cdaedb180a50a6c80f82723915f0006819a5a653b3fcf1`.
+- source: `7a995724099f6f1c60a773f16da5ee91c86fdc7a`, version `1.1.8103`, channel `candidate-not-released`. 새 일반 clone `D:/Engineering/release/agentdock-1.1.8103-7a995724-source`의 clean HEAD로 빌드했다. 이 전달 기록 이후 docs 커밋은 빌드에 들어가지 않는다.
+- `build-report.json`, `verification-scope.json` 및 SHA256은 같은 release 폴더에 있다. identity·version·commit·전체 10개 asset 집합·metadata checksum·실제 rg 15.2.0 번들·독립 홈에서 packaged Skill/plugin bootstrap 검증 통과. 운영 홈은 사용하지 않았다.
+- Setup을 실행하지 않고 고정 Inno unpacker로 추출했다. 내부 ZIP SHA256 `0af0c38c8e20989092a204bcb6f8af7f013bdf1cf832deaf23c594feba3ee147`가 검증한 외부 ZIP과 일치한다. actual tray 안에서 clean build desktop assembly와 ko-KR satellite의 정확한 byte 배열을 찾았다. satellite 1,142키와 Activity 초기화 7키의 한국어 값, 한국어 Setup 메시지, rg 5파일, CUA plugin 4파일 포함 확인. 기존 프리뷰 정책/초기화 기능을 유지한다.
+- actual Setup GUI/CUI shim을 임시 stable root에 배치하고 generation만 유한 fixture로 대체했다. live task 및 native entry가 target에 도달해 fixture exit 7을 전달했고, abandoned owner는 exit 1로 거부했다. 모든 active pointer 불변. **실제 Core 서버·Setup·예약 작업은 시작하지 않았다.** fixture/evidence는 output의 `packaged-shim-evidence.json`, `payload-evidence.json`에 보존한다.
+- 최초 보조 검증 스크립트는 PowerShell `${case}` 구문 오류로 실행 전 실패했다. 스크립트만 바로잡아 통과했고 제품 bytes는 변경하지 않았다. `%TEMP%/agentdock-8103-packaged-shim.log` 및 `agentdock-8103-packaged-shim-recheck.log` 모두 유지한다.
+- 공식 cloudflared 실제 추출 파일 Authenticode는 Valid, AgentDock·Setup은 unsigned다. 공식 Korean.isl의 obsolete font directive 경고 4건은 유지한다. 빌드 로그 `%TEMP%/agentdock-8103-release-build.log`, 자산 검증 `%TEMP%/agentdock-8103-assets-final.log`, metadata 포함 최종 검증 `%TEMP%/agentdock-8103-assets-metadata-final.log`.
+- 8101/8102 Setup bytes와 실패 재현 fixture를 보존했다. GitHub Actions `enabled=false`를 재확인했다. GitHub Release 게시·게시 자산 재다운로드·실제 isolated Windows 설치/업그레이드 수용은 **미실행**이다. 따라서 이 파일 생성·실제 payload 확인을 전체 installer 수용 완료로 표현하지 않는다.
