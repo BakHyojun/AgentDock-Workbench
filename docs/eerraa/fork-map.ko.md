@@ -89,6 +89,7 @@ Setup receipt 공유 위반 대기는 업스트림 `internal/desktopruntime/setu
 | 구분 | 내용 |
 |---|---|
 | 알려진 제약 | `--local-archive`와 데스크톱 복구는 실행 중인 Core의 rg pin으로 payload를 검사하므로, rg pin 변경은 Setup으로만 배포한다. selfupdate의 구형 flat 이관(`PrepareWindowsLegacyGeneration`)은 rg를 복사하지 않는다. fork 설치로는 이 경로에 닿지 않는다. 시작 시 복구는 Core·Tray 버전이 다를 때만 Core 시작마다 GitHub API를 1회 조회하고, 아무것도 바꾸지 않는다. `RuntimeService`의 온라인 업데이트 메서드는 호출되지 않지만 업스트림 계약 시험 때문에 남아 있다. `rules` 모드에서 사용자가 승인한 호출의 결과는 모델에 돌아가지 않는다(모델은 다시 관찰해야 한다). ChatGPT가 MCP 이미지 결과를 모델에게 보여 주는지는 실제 연결로 확인해야 한다 |
+| 확인된 설치 결함 (미수정) | 1.1.8102 관리자 Core의 기존 설치 업그레이드: stable tray `--run-core-task`가 live Installer trial 허용 역할에서 빠져 Core 시작 전 종료 → 120초 health 실패. shipped shim의 disposable fixture로 재현했다. 설정 삭제·Activity quota 문제로 취급하지 않는다. [증거·수정 경계](setup-upgrade-trial-failure.ko.md) |
 | 게시 자산 | 로컬 게시는 `AgentDockSetup-amd64.exe`, `build-report.json`, `verification-scope.json`과 각 `.sha256`만 올린다(ZIP·`install.ps1` 제외). CI의 `windows-package.yml` 게시 경로와 검증기는 아직 10개 기준이다. CI로 게시하려면 먼저 맞춘다 |
 | 보류 후보 (요청 시만) | 메인 창 활동 요약 주기 갱신, 비JSON health 수용, Core 정지 중 버전 표시 프로세스 반복, 상태 조회 실패의 '중지됨' 표시, 앱 밖 Tailscale 주소 변경 시 캐시 혼합, 생성 후 Job 할당 틈, 관리자 작업 UAC 재시도, tunnel configure 롤백, 폴더 보안 재설정 성능, 브라우저 시작 20초 제한 |
 | upstream 1.1.8 이후 미반영 | PR #22 (`0591339a`: 시작 시 DACL이 이미 같으면 재설정 생략 + 시작 단계 시간 기록 → '폴더 보안 재설정 성능'과 겹침; `f1df7381`: 설치 스테이징 분리·launcher rollback journal; `813e7d5f`: 스트리밍 복사). PR #21: 설치 파일만 게시. 재현되는 것만 채택한다 |
