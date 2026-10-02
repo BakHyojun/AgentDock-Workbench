@@ -27,6 +27,7 @@
 - AgentDock/Setup은 **unsigned**, 포함된 공식 cloudflared 서명은 **Valid**다. 공식 `Korean.isl`의 obsolete font 지시문 네 개 경고는 원문을 유지하며 컴파일에 성공했다.
 - 설치·업그레이드·운영 Core 교체/재시작·runner WPF acceptance·Linux/race·GitHub Release 게시·게시 자산 redownload는 실행하지 않았다. 전체 Go suite의 기준선 실패 두 건은 아래에 그대로 보존했다. 후보 준비와 정식 release acceptance를 혼동하지 않는다.
 - 빌드 및 자산/내용 검사 로그는 `D:/Engineering/release/agentdock-1.1.8101/`에 있다. unpacker 출처와 hash도 `verification-scope.json`에 기록한다. 게시하려면 이 metadata의 미실행 관문을 실제 isolated runner evidence로 채워야 한다.
+- 이 fork의 GitHub Actions는 사용자 정책에 따라 repository permissions `enabled=false`로 차단한다. 자동·수동 CI를 실행하거나 사용자 지시 없이 다시 켜지 않는다. 로컬 빌드와 Actions 차단은 별개다. 설정 적용 후 모든 non-terminal status의 workflow run이 0건임을 확인했으며 종료된 실패 기록은 보존한다.
 
 ## 1 Executive Summary
 

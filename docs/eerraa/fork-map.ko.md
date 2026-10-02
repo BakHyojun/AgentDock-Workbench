@@ -9,6 +9,7 @@
 | 항목 | 값 |
 |---|---|
 | 저장소 | origin `eerraa/AgentDock-Workbench` (push 대상). upstream·workbench `A-m-o-r-F-a-t-i/AgentDock-Workbench` (읽기 전용, push 금지). uvwt `uvwt/agentdock` (원조, 참고용) |
+| GitHub CI 정책 | 이 fork의 repository Actions permissions는 `enabled=false`다. 자동·수동 Actions 빌드 모두 차단한다. workflow 파일은 유지하고 로컬 clean-clone 빌드는 계속 사용한다. 사용자의 별도 지시 없이 Actions를 다시 켜지 않는다. 확인: `gh api repos/eerraa/AgentDock-Workbench/actions/permissions`; 종료된 실행·실패 기록은 삭제하지 않는다 |
 | 소스 기준선 | upstream `v1.1.8` 프리릴리스 `4bd778d4077bbe58cfe19e4abb777f660694377b`를 main에 병합한 상태. 이전 기준선은 `v1.1.7` `b367eaab` |
 | 이력 구조 | upstream main의 커밋 전부(뒤진 커밋 0) → upstream main 밖의 기준 태그 병합(`v1.1.8`, 원본 SHA 그대로) → fork 커밋을 기능·결함 수리 단위로 둔다. 2026-09-28 사용자 요청으로 한 번 재구성했다. 이전 이력은 게시 태그 `v1.1.8100`에만 남는다. 이 태그는 CI upgrade 기준 source를 붙잡으므로 옮기거나 지우지 않는다 |
 | 버전 규칙 | `1.1.<upstream patch>100(+수정 번호)`. 현재 게시본 `1.1.8100`(태그 `v1.1.8100`). 게시된 fork 버전(`1.1.6100`, `1.1.8100`)은 재사용하지 않는다. 앱 내 업데이트가 없으므로 이전 fork 버전보다 클 필요는 없다 |
@@ -70,7 +71,7 @@ Setup receipt 공유 위반 대기는 업스트림 `internal/desktopruntime/setu
 | 한국어 | `dotnet run --project scripts/test/testdata/activity-center/ActivityCenterTests.csproj -c Release -- --localization-only` |
 | Setup 스크립트 | `$env:RUNNER_TEMP=<tmp>; pwsh scripts/ci/parallel-installer/test-setup-archive.ps1` (powershell.exe 5.1도 실행); `pwsh scripts/test/test-install-windows.ps1 -StaticOnly` |
 | native 계약 | `dotnet run --project desktop/windows/control-panel-native-tests/AgentDock.ControlPanel.NativeTests.csproj -c Release -- --security-contract-only`. 실제 예약 작업·NTFS fixture는 Actions에서 돌리거나, 명시적인 `--local-isolated`로만 돌린다 |
-| Actions 전용 | WPF 레이아웃, 실제 Setup 설치·업그레이드·롤백. 가드를 우회하거나 로컬 Setup으로 대신하지 않는다 |
+| Actions 전용 | WPF 레이아웃, 실제 Setup 설치·업그레이드·롤백. 현재 이 fork의 Actions 차단 정책으로 실행하지 않는다. 가드를 우회하거나 운영 PC의 Setup으로 대신하지 않는다 |
 
 ## 4. 로컬 빌드 (사용자가 요청할 때만)
 
